@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pi-board</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    header {
+      background: #1e293b;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #334155;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header h1 { margin: 0; font-size: 1.25rem; color: #38bdf8; }
+    .filters { display: flex; gap: 0.75rem; align-items: center; }
+    select, button {
+      background: #334155;
+      color: #e2e8f0;
+      border: 1px solid #475569;
+      border-radius: 0.375rem;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.9rem;
+    }
+    button { cursor: pointer; }
+    button:hover { background: #475569; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1rem;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    .column {
+      background: #1e293b;
+      border-radius: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      min-width: 260px;
+      max-height: calc(100vh - 120px);
+    }
+    .column-header {
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      text-transform: capitalize;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .column-header .count {
+      background: #334155;
+      border-radius: 999px;
+      padding: 0.15rem 0.5rem;
+      font-size: 0.75rem;
+    }
+    .column-body {
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      overflow-y: auto;
+    }
+    .card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.375rem;
+      padding: 0.75rem;
+      cursor: grab;
+    }
+    .card:hover { border-color: #38bdf8; }
+    .card-title { font-weight: 500; margin-bottom: 0.35rem; }
+    .card-meta {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.5rem;
+    }
+    .badge {
+      background: #334155;
+      border-radius: 0.25rem;
+      padding: 0.15rem 0.4rem;
+      font-size: 0.75rem;
+    }
+    .status-backlog .column-header { color: #94a3b8; }
+    .status-in-progress .column-header { color: #38bdf8; }
+    .status-code-review .column-header { color: #a78bfa; }
+    .status-uat .column-header { color: #fbbf24; }
+    .status-completed .column-header { color: #4ade80; }
+    .toast {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 0.75rem 1rem;
+      border-radius: 0.375rem;
+      font-size: 0.85rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    @media (max-width: 1200px) {
+      .board { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .board { grid-template-columns: 1fr; }
+      .column { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>pi-board</h1>
+    <div class="filters">
+      <label for="sprintFilter">Sprint:</label>
+      <select id="sprintFilter"><option value="">All</option></select>
+      <button id="refreshBtn">Refresh</button>
+    </div>
+  </header>
+  <main class="board" id="board"></main>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const STATUSES = ['backlog','in-progress','code-review','uat','completed'];
+    const boardEl = document.getElementById('board');
+    const sprintFilterEl = document.getElementById('sprintFilter');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const toastEl = document.getElementById('toast');
+
+    async function fetchTasks() {
+      const sprint = sprintFilterEl.value;
+      const url = sprint ? `/api/tasks?sprint=${encodeURIComponent(sprint)}` : '/api/tasks';
+      const res = await fetch(url);
+      const data = await res.json();
+      return data.tasks || [];
+    }
+
+    async function fetchAllTasks() {
+      const res = await fetch('/api/tasks');
+      const data = await res.json();
+      return data.tasks || [];
+    }
+
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      setTimeout(() => toastEl.classList.remove('show'), 2000);
+    }
+
+    function renderCard(task) {
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.draggable = true;
+      div.dataset.id = task.id;
+      div.innerHTML = `
+        <div class="card-title">${escapeHtml(task.title)}</div>
+        <div class="card-meta">
+          <span class="badge">${escapeHtml(task.sprint)}</span>
+          <span>${escapeHtml(task.assignee || 'unassigned')}</span>
+        </div>
+      `;
+      div.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', task.id);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      return div;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    async function renderBoard() {
+      const tasks = await fetchTasks();
+      boardEl.innerHTML = '';
+      for (const status of STATUSES) {
+        const col = document.createElement('div');
+        col.className = `column status-${status}`;
+        const statusTasks = tasks.filter(t => t.status === status);
+        col.innerHTML = `
+          <div class="column-header">
+            <span>${status.replace(/-/g, ' ')}</span>
+            <span class="count">${statusTasks.length}</span>
+          </div>
+          <div class="column-body" data-status="${status}"></div>
+        `;
+        const body = col.querySelector('.column-body');
+        for (const task of statusTasks) {
+          body.appendChild(renderCard(task));
+        }
+        body.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+        body.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          const id = e.dataTransfer.getData('text/plain');
+          const newStatus = body.dataset.status;
+          if (!id || !newStatus) return;
+          try {
+            const res = await fetch(`/api/tasks/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) {
+              showToast('Task moved');
+              await renderBoard();
+              await populateSprintFilter();
+            } else {
+              showToast('Failed to move task');
+            }
+          } catch (err) {
+            showToast('Error moving task');
+          }
+        });
+        boardEl.appendChild(col);
+      }
+    }
+
+    async function populateSprintFilter() {
+      const tasks = await fetchAllTasks();
+      const sprints = [...new Set(tasks.map(t => t.sprint))].sort();
+      const current = sprintFilterEl.value;
+      sprintFilterEl.innerHTML = '<option value="">All</option>';
+      for (const s of sprints) {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        if (s === current) opt.selected = true;
+        sprintFilterEl.appendChild(opt);
+      }
+    }
+
+    sprintFilterEl.addEventListener('change', renderBoard);
+    refreshBtn.addEventListener('click', () => { renderBoard(); showToast('Refreshed'); });
+
+    // Auto-refresh every 5 seconds
+    setInterval(() => { renderBoard(); populateSprintFilter(); }, 5000);
+
+    // Initial load
+    renderBoard();
+    populateSprintFilter();
+  </script>
+</body>
+</html>

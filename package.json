@@ -1,0 +1,14 @@
+{
+  "name": "pi-board",
+  "version": "1.0.0",
+  "description": "AI-first local task/sprint manager",
+  "main": "index.js",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./index.js"]
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "typebox": "^1.1.24"
+  }
+}
