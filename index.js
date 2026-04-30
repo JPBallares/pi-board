@@ -686,7 +686,7 @@ module.exports = async function (pi) {
     label: "Import Board from JSON",
     description: "Import board data from JSON (replaces all existing data)",
     parameters: Type.Object({
-      data: Type.Object({ description: "Exported board data object" }),
+      data: Type.Any({ description: "Exported board data object" }),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       importAll(params.data);
