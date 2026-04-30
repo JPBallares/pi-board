@@ -5,6 +5,7 @@ const {
   createLabel, listLabels, updateLabel, deleteLabel,
   createPerson, listPeople, updatePerson, deletePerson,
   createSubtask, toggleSubtask, updateSubtask, deleteSubtask,
+  getColumnSettings, setColumnSetting,
   STATUSES,
 } = require("./lib/board");
 const { start } = require("./server");
@@ -477,6 +478,39 @@ module.exports = async function (pi) {
       return {
         content: [{ type: "text", text: `Created person ${person.id}: ${person.name}` }],
         details: { person },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_list_column_settings",
+    label: "List Column Settings",
+    description: "List WIP limits for all columns",
+    parameters: Type.Object({}),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const settings = getColumnSettings();
+      if (settings.length === 0) return { content: [{ type: "text", text: "No column settings configured." }] };
+      const lines = settings.map(s => `- ${s.status}: WIP limit ${s.wip_limit || 'none'}`);
+      return {
+        content: [{ type: "text", text: `Column settings:\n${lines.join('\n')}` }],
+        details: { settings },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_set_column_wip_limit",
+    label: "Set Column WIP Limit",
+    description: "Set the WIP limit for a column/status",
+    parameters: Type.Object({
+      status: Type.String({ description: "Column status" }),
+      wipLimit: Type.Integer({ description: "WIP limit (0 = no limit)" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const setting = setColumnSetting(params.status, params.wipLimit);
+      return {
+        content: [{ type: "text", text: `Set WIP limit for ${setting.status} to ${setting.wip_limit}` }],
+        details: { setting },
       };
     },
   });

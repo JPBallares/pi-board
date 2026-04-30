@@ -6,6 +6,7 @@ const {
   createLabel, listLabels, updateLabel, deleteLabel,
   createPerson, listPeople, updatePerson, deletePerson,
   createSubtask, getSubtask, listSubtasks, toggleSubtask, updateSubtask, deleteSubtask,
+  getColumnSettings, setColumnSetting,
   STATUSES,
 } = require('./lib/board');
 
@@ -128,6 +129,24 @@ app.delete('/api/subtasks/:id', (req, res) => {
   try {
     deleteSubtask(Number(req.params.id));
     res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Column Settings
+app.get('/api/columns', (_req, res) => {
+  try {
+    res.json({ settings: getColumnSettings() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.patch('/api/columns/:status', (req, res) => {
+  try {
+    const setting = setColumnSetting(req.params.status, req.body.wip_limit);
+    res.json({ setting });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
