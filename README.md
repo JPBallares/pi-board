@@ -15,7 +15,7 @@ pi install npm:pi-board
 ### From GitHub
 
 ```bash
-pi install git:github.com/yourname/pi-board
+pi install git:github.com/JPBallares/pi-board
 ```
 
 ### From local path (development)
