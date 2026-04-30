@@ -1008,6 +1008,35 @@
       startAutoRefresh();
     });
 
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        document.getElementById('addTaskBtn').click();
+      }
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+        isModalOpen = false;
+      }
+      if ((e.key === 'e' || e.key === 'E') && isModalOpen && document.getElementById('taskModalOverlay').classList.contains('open')) {
+        e.preventDefault();
+        if (document.getElementById('taskView').style.display !== 'none') {
+          document.getElementById('editTaskBtn').click();
+        }
+      }
+      if ((e.key === 'd' || e.key === 'D') && isModalOpen && document.getElementById('taskModalOverlay').classList.contains('open')) {
+        e.preventDefault();
+        if (confirm('Delete this task?')) {
+          document.getElementById('deleteTaskBtn').click();
+        }
+      }
+      if (e.key === '?') {
+        e.preventDefault();
+        alert('Keyboard shortcuts:\nN = New task\nE = Edit task (when modal open)\nD = Delete task (when modal open)\nEsc = Close modal\n? = This help');
+      }
+    });
+
     // Initial load
     (async () => {
       await populateSprintFilter();
