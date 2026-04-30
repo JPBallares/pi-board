@@ -32,6 +32,13 @@ module.exports = async function (pi) {
     Type.Literal("chore"),
   ]);
 
+  function normalizeTaskParams(params) {
+    const normalized = { ...params };
+    if (params.sprintId !== undefined) { normalized.sprint_id = params.sprintId; delete normalized.sprintId; }
+    if (params.assigneeId !== undefined) { normalized.assignee_id = params.assigneeId; delete normalized.assigneeId; }
+    return normalized;
+  }
+
   pi.registerTool({
     name: "board_create_task",
     label: "Create Task",
@@ -49,7 +56,7 @@ module.exports = async function (pi) {
       labelIds: Type.Optional(Type.Array(Type.Integer(), { description: "Label IDs to attach" })),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
-      const task = createTask(params);
+      const task = createTask(normalizeTaskParams(params));
       return {
         content: [{ type: "text", text: `Created task ${task.id}: ${task.title} (${task.status})` }],
         details: { task },
@@ -76,7 +83,7 @@ module.exports = async function (pi) {
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const { id, ...updates } = params;
-      const task = updateTask(id, updates);
+      const task = updateTask(id, normalizeTaskParams(updates));
       return {
         content: [{ type: "text", text: `Updated task ${task.id}: ${task.title} (${task.status})` }],
         details: { task },
@@ -103,7 +110,7 @@ module.exports = async function (pi) {
       ], { description: "Sort direction" })),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
-      const tasks = listTasks(params);
+      const tasks = listTasks(normalizeTaskParams(params));
       if (tasks.length === 0) {
         return { content: [{ type: "text", text: "No tasks found." }] };
       }
