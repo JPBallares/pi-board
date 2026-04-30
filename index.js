@@ -1,7 +1,7 @@
 const { exec } = require("child_process");
 const {
   createTask, updateTask, listTasks, getTask, deleteTask, duplicateTask,
-  createSprint, completeSprint, incompleteSprint, listSprints, updateSprint, deleteSprint, getSprint, archiveSprintTasks,
+  createSprint, completeSprint, incompleteSprint, listSprints, updateSprint, deleteSprint, getSprint, archiveSprintTasks, getSprintStats,
   createLabel, listLabels, updateLabel, deleteLabel,
   createPerson, listPeople, updatePerson, deletePerson,
   createSubtask, toggleSubtask, updateSubtask, deleteSubtask,
@@ -320,6 +320,22 @@ module.exports = async function (pi) {
       return {
         content: [{ type: "text", text: `Archived ${result.updated} completed tasks from sprint ${params.id}` }],
         details: { result },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_get_sprint_stats",
+    label: "Get Sprint Stats",
+    description: "Get statistics for a sprint",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Sprint ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const stats = getSprintStats(params.id);
+      return {
+        content: [{ type: "text", text: `Sprint ${stats.sprint_id} stats:\nTotal tasks: ${stats.total}\nCompleted: ${stats.completed} (${stats.completion_pct}%)\nTotal estimate: ${stats.total_estimate} pts\nCompleted estimate: ${stats.completed_estimate} pts (${stats.estimate_completion_pct}%)` }],
+        details: { stats },
       };
     },
   });

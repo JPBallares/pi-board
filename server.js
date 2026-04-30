@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const {
   createTask, updateTask, listTasks, getTask, deleteTask, moveTask,
-  createSprint, completeSprint, incompleteSprint, listSprints, getActiveSprint, updateSprint, deleteSprint,
+  createSprint, completeSprint, incompleteSprint, listSprints, getActiveSprint, updateSprint, deleteSprint, getSprintStats,
   createLabel, listLabels, updateLabel, deleteLabel,
   createPerson, listPeople, updatePerson, deletePerson,
   createSubtask, getSubtask, listSubtasks, toggleSubtask, updateSubtask, deleteSubtask,
@@ -201,6 +201,15 @@ app.delete('/api/sprints/:id', (req, res) => {
   try {
     deleteSprint(Number(req.params.id));
     res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.get('/api/sprints/:id/stats', (req, res) => {
+  try {
+    const stats = getSprintStats(Number(req.params.id));
+    res.json({ stats });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
