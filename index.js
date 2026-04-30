@@ -1,6 +1,6 @@
 const { exec } = require("child_process");
 const {
-  createTask, updateTask, listTasks, getTask, deleteTask,
+  createTask, updateTask, listTasks, getTask, deleteTask, duplicateTask,
   createSprint, completeSprint, incompleteSprint, listSprints, updateSprint, deleteSprint, getSprint,
   createLabel, listLabels, updateLabel, deleteLabel,
   createPerson, listPeople, updatePerson, deletePerson,
@@ -164,6 +164,22 @@ module.exports = async function (pi) {
       const task = deleteTask(params.id);
       return {
         content: [{ type: "text", text: `Deleted task ${task.id}: ${task.title}` }],
+        details: { task },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_duplicate_task",
+    label: "Duplicate Task",
+    description: "Duplicate a task by ID",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Task ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const task = duplicateTask(params.id);
+      return {
+        content: [{ type: "text", text: `Duplicated task ${params.id} → new task ${task.id}: ${task.title}` }],
         details: { task },
       };
     },

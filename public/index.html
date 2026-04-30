@@ -246,6 +246,7 @@
         </div>
         <div class="modal-actions">
           <button id="deleteTaskBtn" class="danger">Delete</button>
+          <button id="duplicateTaskBtn">Duplicate</button>
           <button id="editTaskBtn">Edit</button>
           <button id="closeTaskBtn">Close</button>
         </div>
@@ -690,6 +691,17 @@
         await renderBoard();
       } catch (err) {
         showToast('Save failed: ' + err.message);
+      }
+    });
+    document.getElementById('duplicateTaskBtn').addEventListener('click', async () => {
+      const id = Number(document.getElementById('eId').value);
+      try {
+        await api(`/api/tasks/${id}/duplicate`, { method: 'POST' });
+        showToast('Task duplicated');
+        closeModal('taskModalOverlay');
+        await renderBoard();
+      } catch (err) {
+        showToast('Duplicate failed: ' + err.message);
       }
     });
     document.getElementById('deleteTaskBtn').addEventListener('click', async () => {

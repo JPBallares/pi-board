@@ -77,6 +77,15 @@ app.post('/api/tasks/:id/move', (req, res) => {
   }
 });
 
+app.post('/api/tasks/:id/duplicate', (req, res) => {
+  try {
+    const task = require('./lib/board').duplicateTask(Number(req.params.id));
+    res.status(201).json({ task });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 // Subtasks
 app.get('/api/tasks/:id/subtasks', (req, res) => {
   try {
