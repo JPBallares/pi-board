@@ -225,6 +225,12 @@
       <button id="labelsBtn">Labels</button>
       <button id="peopleBtn">People</button>
       <button id="sprintBtn">Sprints</button>
+      <button id="exportJsonBtn" title="Export JSON" style="font-size:0.75rem">⬇ JSON</button>
+      <button id="exportCsvBtn" title="Export CSV" style="font-size:0.75rem">⬇ CSV</button>
+      <label style="font-size:0.75rem;cursor:pointer">
+        <span>⬆ Import</span>
+        <input type="file" id="importJsonInput" accept=".json" style="display:none" />
+      </label>
     </div>
   </header>
   <main class="board" id="board"></main>
@@ -1067,6 +1073,36 @@
     autoRefreshSelect.addEventListener('change', () => {
       localStorage.setItem('pi-board-auto-refresh', autoRefreshSelect.value);
       startAutoRefresh();
+    });
+
+    document.getElementById('exportJsonBtn').addEventListener('click', () => {
+      window.location.href = '/api/export/json';
+    });
+    document.getElementById('exportCsvBtn').addEventListener('click', () => {
+      const params = new URLSearchParams();
+      if (sprintFilterEl.value) params.set('sprint_id', sprintFilterEl.value);
+      if (document.getElementById('assigneeFilter').value) params.set('assignee_id', document.getElementById('assigneeFilter').value);
+      if (document.getElementById('labelFilter').value) params.set('label_ids', document.getElementById('labelFilter').value);
+      if (document.getElementById('archivedToggle').checked) params.set('archived', '1');
+      window.location.href = '/api/export/csv?' + params.toString();
+    });
+    document.getElementById('importJsonInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!confirm('This will REPLACE all current board data. Continue?')) { e.target.value = ''; return; }
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        await api('/api/import/json', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        showToast('Import successful');
+        await renderBoard();
+        await populateSprintFilter();
+        await populateAssigneeFilter();
+        await populateLabelFilter();
+      } catch (err) {
+        showToast('Import failed: ' + err.message);
+      }
+      e.target.value = '';
     });
 
     // Keyboard shortcuts

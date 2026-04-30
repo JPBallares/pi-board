@@ -6,6 +6,7 @@ const {
   createPerson, listPeople, updatePerson, deletePerson,
   createSubtask, toggleSubtask, updateSubtask, deleteSubtask,
   getColumnSettings, setColumnSetting,
+  exportAll, importAll,
   STATUSES,
 } = require("./lib/board");
 const { start } = require("./server");
@@ -576,6 +577,36 @@ module.exports = async function (pi) {
       deletePerson(params.id);
       return {
         content: [{ type: "text", text: `Deleted person ${params.id}` }],
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_export_json",
+    label: "Export Board to JSON",
+    description: "Export all board data to JSON",
+    parameters: Type.Object({}),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const data = exportAll();
+      const summary = `Sprints: ${data.sprints.length}, Tasks: ${data.tasks.length}, Labels: ${data.labels.length}, People: ${data.people.length}`;
+      return {
+        content: [{ type: "text", text: `Board export:\n${summary}` }],
+        details: { data },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_import_json",
+    label: "Import Board from JSON",
+    description: "Import board data from JSON (replaces all existing data)",
+    parameters: Type.Object({
+      data: Type.Object({ description: "Exported board data object" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      importAll(params.data);
+      return {
+        content: [{ type: "text", text: "Board data imported successfully." }],
       };
     },
   });

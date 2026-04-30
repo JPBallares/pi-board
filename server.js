@@ -7,6 +7,7 @@ const {
   createPerson, listPeople, updatePerson, deletePerson,
   createSubtask, getSubtask, listSubtasks, toggleSubtask, updateSubtask, deleteSubtask,
   getColumnSettings, setColumnSetting,
+  exportAll, importAll,
   STATUSES,
 } = require('./lib/board');
 
@@ -284,6 +285,51 @@ app.delete('/api/people/:id', (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: e.message });
+  }
+});
+
+app.get('/api/export/json', (_req, res) => {
+  try {
+    const data = exportAll();
+    res.setHeader('Content-Disposition', 'attachment; filename="pi-board-export.json"');
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/import/json', (req, res) => {
+  try {
+    importAll(req.body);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.get('/api/export/csv', (req, res) => {
+  try {
+    const tasks = listTasks({
+      sprint_id: req.query.sprint_id,
+      status: req.query.status,
+      search: req.query.search,
+      assignee_id: req.query.assignee_id,
+      labelIds: req.query.label_ids ? req.query.label_ids.split(',').map(Number) : undefined,
+      archived: req.query.archived === '1' || req.query.archived === 'true',
+      sortBy: req.query.sort_by,
+      sortOrder: req.query.sort_order,
+    });
+    const headers = ['id','title','description','status','type','priority','sprint_id','assignee_id','due_date','estimate','created_at','updated_at'];
+    const rows = tasks.map(t => [
+      t.id, JSON.stringify(t.title), JSON.stringify(t.description || ''), t.status, t.type, t.priority,
+      t.sprint_id || '', t.assignee_id || '', t.due_date || '', t.estimate || '', t.created_at, t.updated_at
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    res.setHeader('Content-Disposition', 'attachment; filename="pi-board-tasks.csv"');
+    res.setHeader('Content-Type', 'text/csv');
+    res.send(csv);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
