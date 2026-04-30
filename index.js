@@ -8,6 +8,7 @@ const {
   getColumnSettings, setColumnSetting,
   exportAll, importAll,
   getSprintBurndown, getAssigneeWorkload,
+  createComment, listComments, deleteComment,
   STATUSES,
 } = require("./lib/board");
 const { start } = require("./server");
@@ -256,6 +257,57 @@ module.exports = async function (pi) {
       return {
         content: [{ type: "text", text: `Deleted subtask ${subtask.id}: ${subtask.title}` }],
         details: { subtask },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_add_comment",
+    label: "Add Comment",
+    description: "Add a comment to a task",
+    parameters: Type.Object({
+      taskId: Type.Integer({ description: "Task ID" }),
+      body: Type.String({ description: "Comment text" }),
+      author: Type.Optional(Type.String({ description: "Author name" })),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const comment = createComment({ task_id: params.taskId, author: params.author, body: params.body });
+      return {
+        content: [{ type: "text", text: `Added comment to task ${params.taskId}` }],
+        details: { comment },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_list_comments",
+    label: "List Comments",
+    description: "List comments on a task",
+    parameters: Type.Object({
+      taskId: Type.Integer({ description: "Task ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const comments = listComments(params.taskId);
+      if (comments.length === 0) return { content: [{ type: "text", text: "No comments." }] };
+      const lines = comments.map(c => `- ${c.author} (${c.created_at}): ${c.body}`);
+      return {
+        content: [{ type: "text", text: `Comments (${comments.length}):\n${lines.join('\n')}` }],
+        details: { comments },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_delete_comment",
+    label: "Delete Comment",
+    description: "Delete a comment by ID",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Comment ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      deleteComment(params.id);
+      return {
+        content: [{ type: "text", text: `Deleted comment ${params.id}` }],
       };
     },
   });

@@ -10,6 +10,7 @@ const {
   exportAll, importAll,
   getTaskActivity,
   getSprintBurndown, getAssigneeWorkload,
+  createComment, listComments, deleteComment,
   STATUSES,
 } = require('./lib/board');
 
@@ -97,6 +98,33 @@ app.get('/api/tasks/:id/activity', (req, res) => {
     res.json({ activity });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/tasks/:id/comments', (req, res) => {
+  try {
+    const comments = listComments(Number(req.params.id));
+    res.json({ comments });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/comments', (req, res) => {
+  try {
+    const comment = createComment(req.body);
+    res.status(201).json({ comment });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.delete('/api/comments/:id', (req, res) => {
+  try {
+    deleteComment(Number(req.params.id));
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
   }
 });
 
