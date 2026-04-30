@@ -6,12 +6,13 @@ const {
   createLabel, listLabels, updateLabel, deleteLabel,
   createPerson, listPeople, updatePerson, deletePerson,
   createSubtask, getSubtask, listSubtasks, toggleSubtask, updateSubtask, deleteSubtask,
-  getColumnSettings, setColumnSetting,
+  listColumns, getColumn, createColumn, updateColumn, deleteColumn,
+  getBoardSetting, setBoardSetting,
   exportAll, importAll,
   getTaskActivity,
   getSprintBurndown, getAssigneeWorkload,
   createComment, listComments, deleteComment,
-  STATUSES,
+  getStatuses,
 } = require('./lib/board');
 
 const app = express();
@@ -174,19 +175,56 @@ app.delete('/api/subtasks/:id', (req, res) => {
   }
 });
 
-// Column Settings
+// Columns
 app.get('/api/columns', (_req, res) => {
   try {
-    res.json({ settings: getColumnSettings() });
+    res.json({ columns: listColumns() });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-app.patch('/api/columns/:status', (req, res) => {
+app.post('/api/columns', (req, res) => {
   try {
-    const setting = setColumnSetting(req.params.status, req.body.wip_limit);
-    res.json({ setting });
+    const col = createColumn(req.body);
+    res.status(201).json({ column: col });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.patch('/api/columns/:key', (req, res) => {
+  try {
+    const col = updateColumn(req.params.key, req.body);
+    res.json({ column: col });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.delete('/api/columns/:key', (req, res) => {
+  try {
+    deleteColumn(req.params.key);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Board Settings
+app.get('/api/board/settings', (_req, res) => {
+  try {
+    const swimlane = getBoardSetting('swimlane_group_by');
+    res.json({ settings: { swimlane_group_by: swimlane || 'none' } });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.patch('/api/board/settings', (req, res) => {
+  try {
+    const result = setBoardSetting(req.body.key, req.body.value);
+    res.json({ setting: result });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
@@ -390,7 +428,7 @@ app.get('/api/export/csv', (req, res) => {
   }
 });
 
-app.get('/api/statuses', (_req, res) => res.json({ statuses: STATUSES }));
+app.get('/api/statuses', (_req, res) => res.json({ statuses: getStatuses() }));
 
 let serverInstance = null;
 

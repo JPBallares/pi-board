@@ -1,28 +1,27 @@
 const { exec } = require("child_process");
+const board = require("./lib/board");
 const {
   createTask, updateTask, listTasks, getTask, deleteTask, duplicateTask,
   createSprint, completeSprint, incompleteSprint, listSprints, updateSprint, deleteSprint, getSprint, archiveSprintTasks, getSprintStats,
   createLabel, listLabels, updateLabel, deleteLabel,
   createPerson, listPeople, updatePerson, deletePerson,
   createSubtask, toggleSubtask, updateSubtask, deleteSubtask,
-  getColumnSettings, setColumnSetting,
+  listColumns, getColumn, createColumn, updateColumn, deleteColumn,
+  getBoardSetting, setBoardSetting,
   exportAll, importAll,
   getSprintBurndown, getAssigneeWorkload,
   createComment, listComments, deleteComment,
-  STATUSES,
-} = require("./lib/board");
+  getStatuses,
+} = board;
 const { start, stop } = require("./server");
 
 module.exports = async function (pi) {
   const { Type } = await import("typebox");
 
-  const StatusType = Type.Union([
-    Type.Literal("backlog"),
-    Type.Literal("in-progress"),
-    Type.Literal("code-review"),
-    Type.Literal("uat"),
-    Type.Literal("completed"),
-  ]);
+  const statuses = getStatuses();
+  const StatusType = statuses.length > 0
+    ? Type.Union(statuses.map(s => Type.Literal(s)))
+    : Type.String();
 
   const PriorityType = Type.Union([
     Type.Literal("urgent"),
@@ -585,34 +584,109 @@ module.exports = async function (pi) {
   });
 
   pi.registerTool({
-    name: "board_list_column_settings",
-    label: "List Column Settings",
-    description: "List WIP limits for all columns",
+    name: "board_list_columns",
+    label: "List Columns",
+    description: "List all board columns with their settings",
     parameters: Type.Object({}),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
-      const settings = getColumnSettings();
-      if (settings.length === 0) return { content: [{ type: "text", text: "No column settings configured." }] };
-      const lines = settings.map(s => `- ${s.status}: WIP limit ${s.wip_limit || 'none'}`);
+      const columns = listColumns();
+      if (columns.length === 0) return { content: [{ type: "text", text: "No columns configured." }] };
+      const lines = columns.map(c => `- ${c.key}: ${c.name} (position: ${c.position}, WIP: ${c.wip_limit || 'none'}, color: ${c.color})`);
       return {
-        content: [{ type: "text", text: `Column settings:\n${lines.join('\n')}` }],
-        details: { settings },
+        content: [{ type: "text", text: `Columns (${columns.length}):\n${lines.join('\n')}` }],
+        details: { columns },
       };
     },
   });
 
   pi.registerTool({
-    name: "board_set_column_wip_limit",
-    label: "Set Column WIP Limit",
-    description: "Set the WIP limit for a column/status",
+    name: "board_create_column",
+    label: "Create Column",
+    description: "Create a new board column",
     parameters: Type.Object({
-      status: Type.String({ description: "Column status" }),
-      wipLimit: Type.Integer({ description: "WIP limit (0 = no limit)" }),
+      key: Type.String({ description: "Machine key (lowercase alphanumeric with hyphens)" }),
+      name: Type.String({ description: "Display name" }),
+      color: Type.Optional(Type.String({ description: "Hex color (e.g. #38bdf8)" })),
+      position: Type.Optional(Type.Integer({ description: "Column position order" })),
+      wipLimit: Type.Optional(Type.Integer({ description: "WIP limit (0 = none)" })),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
-      const setting = setColumnSetting(params.status, params.wipLimit);
+      const col = createColumn({ key: params.key, name: params.name, color: params.color, position: params.position, wip_limit: params.wipLimit });
       return {
-        content: [{ type: "text", text: `Set WIP limit for ${setting.status} to ${setting.wip_limit}` }],
-        details: { setting },
+        content: [{ type: "text", text: `Created column ${col.key}: ${col.name}` }],
+        details: { column: col },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_update_column",
+    label: "Update Column",
+    description: "Update a column by key",
+    parameters: Type.Object({
+      key: Type.String({ description: "Column key" }),
+      name: Type.Optional(Type.String()),
+      color: Type.Optional(Type.String()),
+      position: Type.Optional(Type.Integer()),
+      wipLimit: Type.Optional(Type.Integer()),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const { key, ...rest } = params;
+      const updates = {};
+      if (rest.name !== undefined) updates.name = rest.name;
+      if (rest.color !== undefined) updates.color = rest.color;
+      if (rest.position !== undefined) updates.position = rest.position;
+      if (rest.wipLimit !== undefined) updates.wip_limit = rest.wipLimit;
+      const col = updateColumn(key, updates);
+      return {
+        content: [{ type: "text", text: `Updated column ${col.key}: ${col.name}` }],
+        details: { column: col },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_delete_column",
+    label: "Delete Column",
+    description: "Delete a column by key (fails if tasks are in it)",
+    parameters: Type.Object({
+      key: Type.String({ description: "Column key" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      deleteColumn(params.key);
+      return {
+        content: [{ type: "text", text: `Deleted column ${params.key}` }],
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_get_board_settings",
+    label: "Get Board Settings",
+    description: "Get board settings including swimlane configuration",
+    parameters: Type.Object({}),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const swimlane = getBoardSetting('swimlane_group_by');
+      return {
+        content: [{ type: "text", text: `Swimlane group by: ${swimlane || 'none'}` }],
+        details: { swimlane_group_by: swimlane || 'none' },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_set_board_setting",
+    label: "Set Board Setting",
+    description: "Set a board setting (e.g. swimlane_group_by)",
+    parameters: Type.Object({
+      key: Type.String({ description: "Setting key" }),
+      value: Type.String({ description: "Setting value" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const result = setBoardSetting(params.key, params.value);
+      return {
+        content: [{ type: "text", text: `Set ${result.key} = ${result.value}` }],
+        details: { setting: result },
       };
     },
   });
