@@ -36,6 +36,7 @@ module.exports = async function (pi) {
     const normalized = { ...params };
     if (params.sprintId !== undefined) { normalized.sprint_id = params.sprintId; delete normalized.sprintId; }
     if (params.assigneeId !== undefined) { normalized.assignee_id = params.assigneeId; delete normalized.assigneeId; }
+    if (params.labelIds !== undefined) { normalized.labelIds = params.labelIds; delete normalized.labelIds; }
     return normalized;
   }
 
@@ -99,6 +100,8 @@ module.exports = async function (pi) {
       sprintId: Type.Optional(Type.Integer({ description: "Filter by sprint ID" })),
       status: Type.Optional(StatusType),
       search: Type.Optional(Type.String({ description: "Search by title substring" })),
+      assigneeId: Type.Optional(Type.Integer({ description: "Filter by assignee person ID" })),
+      labelIds: Type.Optional(Type.Array(Type.Integer(), { description: "Filter by label IDs" })),
       sortBy: Type.Optional(Type.Union([
         Type.Literal("priority"),
         Type.Literal("order"),

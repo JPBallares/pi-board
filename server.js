@@ -19,6 +19,8 @@ app.get('/api/tasks', (req, res) => {
       sprint_id: req.query.sprint_id,
       status: req.query.status,
       search: req.query.search,
+      assignee_id: req.query.assignee_id,
+      labelIds: req.query.label_ids ? req.query.label_ids.split(',').map(Number) : undefined,
       sortBy: req.query.sort_by,
       sortOrder: req.query.sort_order,
     });
