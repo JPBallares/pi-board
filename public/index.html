@@ -452,7 +452,10 @@
       div.draggable = true;
       div.dataset.id = task.id;
       div.innerHTML = `
-        <div class="card-title">${escapeHtml(task.title)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.3rem">
+          <div class="card-title" style="flex:1">${escapeHtml(task.title)}</div>
+          <button class="card-menu-btn" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1rem;line-height:1;padding:0.1rem" title="Move to…">⋯</button>
+        </div>
         <div class="card-meta">
           <span class="chip type-${task.type}">${task.type}</span>
           <span class="chip priority-${task.priority}">${task.priority}</span>
@@ -468,7 +471,19 @@
         e.dataTransfer.effectAllowed = 'move';
       });
       div.addEventListener('dragend', () => { isDragging = false; });
-      div.addEventListener('click', () => openTaskModal(task.id));
+      div.addEventListener('click', (e) => {
+        if (e.target.closest('.card-menu-btn')) return;
+        openTaskModal(task.id);
+      });
+      div.querySelector('.card-menu-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const status = prompt(`Move task #${task.id} to status:\n${STATUSES.join(', ')}`, task.status);
+        if (status && STATUSES.includes(status) && status !== task.status) {
+          api(`/api/tasks/${task.id}/move`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, order: task.order }) })
+            .then(() => { showToast('Task moved'); renderBoard(); })
+            .catch(err => showToast(err.message));
+        }
+      });
       return div;
     }
 
