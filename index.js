@@ -4,6 +4,7 @@ const {
   createSprint, completeSprint, incompleteSprint, listSprints, updateSprint, deleteSprint, getSprint,
   createLabel, listLabels, updateLabel, deleteLabel,
   createPerson, listPeople, updatePerson, deletePerson,
+  createSubtask, toggleSubtask, updateSubtask, deleteSubtask,
   STATUSES,
 } = require("./lib/board");
 const { start } = require("./server");
@@ -164,6 +165,75 @@ module.exports = async function (pi) {
       return {
         content: [{ type: "text", text: `Deleted task ${task.id}: ${task.title}` }],
         details: { task },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_add_subtask",
+    label: "Add Subtask",
+    description: "Add a subtask to a task",
+    parameters: Type.Object({
+      taskId: Type.Integer({ description: "Parent task ID" }),
+      title: Type.String({ description: "Subtask title" }),
+      order: Type.Optional(Type.Integer({ description: "Display order" })),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const subtask = createSubtask({ task_id: params.taskId, title: params.title, order: params.order });
+      return {
+        content: [{ type: "text", text: `Added subtask ${subtask.id} to task ${params.taskId}: ${subtask.title}` }],
+        details: { subtask },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_toggle_subtask",
+    label: "Toggle Subtask",
+    description: "Toggle completion status of a subtask",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Subtask ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const subtask = toggleSubtask(params.id);
+      return {
+        content: [{ type: "text", text: `Subtask ${subtask.id} ${subtask.completed ? 'completed' : 'incomplete'}: ${subtask.title}` }],
+        details: { subtask },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_update_subtask",
+    label: "Update Subtask",
+    description: "Update a subtask title or order",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Subtask ID" }),
+      title: Type.Optional(Type.String()),
+      order: Type.Optional(Type.Integer()),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const { id, ...updates } = params;
+      const subtask = updateSubtask(id, updates);
+      return {
+        content: [{ type: "text", text: `Updated subtask ${subtask.id}: ${subtask.title}` }],
+        details: { subtask },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_delete_subtask",
+    label: "Delete Subtask",
+    description: "Delete a subtask by ID",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Subtask ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const subtask = deleteSubtask(params.id);
+      return {
+        content: [{ type: "text", text: `Deleted subtask ${subtask.id}: ${subtask.title}` }],
+        details: { subtask },
       };
     },
   });

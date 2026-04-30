@@ -5,6 +5,7 @@ const {
   createSprint, completeSprint, incompleteSprint, listSprints, getActiveSprint, updateSprint, deleteSprint,
   createLabel, listLabels, updateLabel, deleteLabel,
   createPerson, listPeople, updatePerson, deletePerson,
+  createSubtask, getSubtask, listSubtasks, toggleSubtask, updateSubtask, deleteSubtask,
   STATUSES,
 } = require('./lib/board');
 
@@ -71,6 +72,52 @@ app.post('/api/tasks/:id/move', (req, res) => {
   try {
     const task = moveTask(Number(req.params.id), req.body.status, req.body.order);
     res.json({ task });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Subtasks
+app.get('/api/tasks/:id/subtasks', (req, res) => {
+  try {
+    const subtasks = listSubtasks(Number(req.params.id));
+    res.json({ subtasks });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/subtasks', (req, res) => {
+  try {
+    const subtask = createSubtask(req.body);
+    res.status(201).json({ subtask });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.patch('/api/subtasks/:id', (req, res) => {
+  try {
+    const subtask = updateSubtask(Number(req.params.id), req.body);
+    res.json({ subtask });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/subtasks/:id/toggle', (req, res) => {
+  try {
+    const subtask = toggleSubtask(Number(req.params.id));
+    res.json({ subtask });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.delete('/api/subtasks/:id', (req, res) => {
+  try {
+    deleteSubtask(Number(req.params.id));
+    res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
