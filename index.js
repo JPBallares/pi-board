@@ -1,7 +1,7 @@
 const { exec } = require("child_process");
 const {
   createTask, updateTask, listTasks, getTask, deleteTask, duplicateTask,
-  createSprint, completeSprint, incompleteSprint, listSprints, updateSprint, deleteSprint, getSprint,
+  createSprint, completeSprint, incompleteSprint, listSprints, updateSprint, deleteSprint, getSprint, archiveSprintTasks,
   createLabel, listLabels, updateLabel, deleteLabel,
   createPerson, listPeople, updatePerson, deletePerson,
   createSubtask, toggleSubtask, updateSubtask, deleteSubtask,
@@ -111,6 +111,7 @@ module.exports = async function (pi) {
       search: Type.Optional(Type.String({ description: "Search by title or description substring" })),
       assigneeId: Type.Optional(Type.Integer({ description: "Filter by assignee person ID" })),
       labelIds: Type.Optional(Type.Array(Type.Integer(), { description: "Filter by label IDs" })),
+      archived: Type.Optional(Type.Boolean({ description: "Include archived tasks" })),
       sortBy: Type.Optional(Type.Union([
         Type.Literal("priority"),
         Type.Literal("order"),
@@ -122,7 +123,9 @@ module.exports = async function (pi) {
       ], { description: "Sort direction" })),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
-      const tasks = listTasks(normalizeTaskParams(params));
+      const normalized = normalizeTaskParams(params);
+      if (params.archived === undefined) normalized.archived = false;
+      const tasks = listTasks(normalized);
       if (tasks.length === 0) {
         return { content: [{ type: "text", text: "No tasks found." }] };
       }
@@ -300,6 +303,22 @@ module.exports = async function (pi) {
       return {
         content: [{ type: "text", text: `Completed sprint ${sprint.id}: ${sprint.name}` }],
         details: { sprint },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_archive_sprint_tasks",
+    label: "Archive Sprint Tasks",
+    description: "Archive all completed tasks in a sprint",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Sprint ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const result = archiveSprintTasks(params.id);
+      return {
+        content: [{ type: "text", text: `Archived ${result.updated} completed tasks from sprint ${params.id}` }],
+        details: { result },
       };
     },
   });

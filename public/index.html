@@ -196,6 +196,9 @@
       <select id="sprintFilter"><option value="">All Sprints</option></select>
       <input type="text" id="searchInput" placeholder="Search title or description…" />
       <button id="searchBtn">Search</button>
+      <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.8rem;color:#94a3b8;cursor:pointer">
+        <input type="checkbox" id="archivedToggle" /> Show archived
+      </label>
       <select id="sortSelect">
         <option value="order-asc">Order ↑</option>
         <option value="order-desc">Order ↓</option>
@@ -395,6 +398,7 @@
       if (search) params.set('search', search);
       const [sortBy, sortOrder] = sortSelect.value.split('-');
       if (sortBy) { params.set('sort_by', sortBy); params.set('sort_order', sortOrder); }
+      if (document.getElementById('archivedToggle').checked) params.set('archived', '1');
       const url = '/api/tasks' + (params.toString() ? '?' + params.toString() : '');
       const data = await api(url);
       return data.tasks || [];
@@ -945,6 +949,7 @@
     sprintFilterEl.addEventListener('change', renderBoard);
     searchBtn.addEventListener('click', renderBoard);
     searchInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') renderBoard(); });
+    document.getElementById('archivedToggle').addEventListener('change', renderBoard);
     sortSelect.addEventListener('change', () => {
       localStorage.setItem('pi-board-sort', sortSelect.value);
       renderBoard();

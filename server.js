@@ -22,6 +22,7 @@ app.get('/api/tasks', (req, res) => {
       search: req.query.search,
       assignee_id: req.query.assignee_id,
       labelIds: req.query.label_ids ? req.query.label_ids.split(',').map(Number) : undefined,
+      archived: req.query.archived === '1' || req.query.archived === 'true',
       sortBy: req.query.sort_by,
       sortOrder: req.query.sort_order,
     });
