@@ -9,7 +9,7 @@ AI-first local task and sprint manager with a Kanban web UI. Manage tasks throug
 ### From npm
 
 ```bash
-pi install npm:pi-board
+pi install npm:@jpballares/pi-board
 ```
 
 ### From GitHub
