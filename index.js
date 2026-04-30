@@ -7,6 +7,7 @@ const {
   createSubtask, toggleSubtask, updateSubtask, deleteSubtask,
   getColumnSettings, setColumnSetting,
   exportAll, importAll,
+  getSprintBurndown, getAssigneeWorkload,
   STATUSES,
 } = require("./lib/board");
 const { start } = require("./server");
@@ -337,6 +338,38 @@ module.exports = async function (pi) {
       return {
         content: [{ type: "text", text: `Sprint ${stats.sprint_id} stats:\nTotal tasks: ${stats.total}\nCompleted: ${stats.completed} (${stats.completion_pct}%)\nTotal estimate: ${stats.total_estimate} pts\nCompleted estimate: ${stats.completed_estimate} pts (${stats.estimate_completion_pct}%)` }],
         details: { stats },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_get_sprint_burndown",
+    label: "Get Sprint Burndown",
+    description: "Get burndown data for a sprint",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Sprint ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const burndown = getSprintBurndown(params.id);
+      const lines = burndown.completions.map(c => `- ${c.day}: ${c.count} tasks (${c.estimate} pts)`);
+      return {
+        content: [{ type: "text", text: `Burndown for sprint ${params.id}:\nTotal: ${burndown.total} tasks / ${burndown.totalEstimate} pts\nDaily completions:\n${lines.join('\n') || 'None'}` }],
+        details: { burndown },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_get_workload",
+    label: "Get Workload",
+    description: "Get assignee workload overview",
+    parameters: Type.Object({}),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const workload = getAssigneeWorkload();
+      const lines = workload.map(w => `- ${w.name}: ${w.task_count} tasks, ${w.total_estimate} pts`);
+      return {
+        content: [{ type: "text", text: `Assignee workload:\n${lines.join('\n')}` }],
+        details: { workload },
       };
     },
   });

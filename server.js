@@ -9,6 +9,7 @@ const {
   getColumnSettings, setColumnSetting,
   exportAll, importAll,
   getTaskActivity,
+  getSprintBurndown, getAssigneeWorkload,
   STATUSES,
 } = require('./lib/board');
 
@@ -223,6 +224,24 @@ app.get('/api/sprints/:id/stats', (req, res) => {
     res.json({ stats });
   } catch (e) {
     res.status(400).json({ error: e.message });
+  }
+});
+
+app.get('/api/sprints/:id/burndown', (req, res) => {
+  try {
+    const burndown = getSprintBurndown(Number(req.params.id));
+    res.json({ burndown });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.get('/api/workload', (_req, res) => {
+  try {
+    const workload = getAssigneeWorkload();
+    res.json({ workload });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
