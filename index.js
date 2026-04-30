@@ -380,6 +380,40 @@ module.exports = async function (pi) {
     },
   });
 
+  pi.registerTool({
+    name: "board_update_person",
+    label: "Update Person",
+    description: "Update a person by ID",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Person ID" }),
+      name: Type.Optional(Type.String()),
+      color: Type.Optional(Type.String({ description: "Hex color (e.g. #4ade80)" })),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const { id, ...rest } = params;
+      const person = updatePerson(id, rest.name, rest.color);
+      return {
+        content: [{ type: "text", text: `Updated person ${person.id}: ${person.name}` }],
+        details: { person },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_delete_person",
+    label: "Delete Person",
+    description: "Delete a person by ID (unassigns their tasks)",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Person ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      deletePerson(params.id);
+      return {
+        content: [{ type: "text", text: `Deleted person ${params.id}` }],
+      };
+    },
+  });
+
   pi.registerCommand("board", {
     description: "Open the Kanban board web UI in your browser",
     handler: async (args, ctx) => {
