@@ -105,7 +105,7 @@ module.exports = async function (pi) {
     parameters: Type.Object({
       sprintId: Type.Optional(Type.Integer({ description: "Filter by sprint ID" })),
       status: Type.Optional(StatusType),
-      search: Type.Optional(Type.String({ description: "Search by title substring" })),
+      search: Type.Optional(Type.String({ description: "Search by title or description substring" })),
       assigneeId: Type.Optional(Type.Integer({ description: "Filter by assignee person ID" })),
       labelIds: Type.Optional(Type.Array(Type.Integer(), { description: "Filter by label IDs" })),
       sortBy: Type.Optional(Type.Union([
