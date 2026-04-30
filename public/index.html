@@ -235,6 +235,8 @@
         <div class="form-group"><label>Sprint</label><div id="vSprint"></div></div>
         <div class="form-group"><label>Assignee</label><div id="vAssignee"></div></div>
         <div class="form-group"><label>Labels</label><div id="vLabels"></div></div>
+        <div class="form-group"><label>Due Date</label><div id="vDueDate"></div></div>
+        <div class="form-group"><label>Estimate</label><div id="vEstimate"></div></div>
         <div class="modal-actions">
           <button id="deleteTaskBtn" class="danger">Delete</button>
           <button id="editTaskBtn">Edit</button>
@@ -251,6 +253,8 @@
         <div class="form-group"><label>Sprint</label><select id="eSprint"><option value="">None</option></select></div>
         <div class="form-group"><label>Assignee</label><select id="eAssignee"><option value="">Unassigned</option></select></div>
         <div class="form-group"><label>Labels</label><div class="label-picker" id="eLabels"></div></div>
+        <div class="form-group"><label>Due Date</label><input id="eDueDate" type="date" /></div>
+        <div class="form-group"><label>Estimate</label><input id="eEstimate" type="number" min="0" placeholder="Story points" /></div>
         <div class="modal-actions">
           <button id="cancelEditBtn">Cancel</button>
           <button id="saveTaskBtn" class="primary">Save</button>
@@ -271,6 +275,8 @@
       <div class="form-group"><label>Sprint</label><select id="nSprint"><option value="">None</option></select></div>
       <div class="form-group"><label>Assignee</label><select id="nAssignee"><option value="">Unassigned</option></select></div>
       <div class="form-group"><label>Labels</label><div class="label-picker" id="nLabels"></div></div>
+      <div class="form-group"><label>Due Date</label><input id="nDueDate" type="date" /></div>
+      <div class="form-group"><label>Estimate</label><input id="nEstimate" type="number" min="0" placeholder="Story points" /></div>
       <div class="modal-actions">
         <button id="cancelAddBtn">Cancel</button>
         <button id="createTaskBtn" class="primary">Create</button>
@@ -428,6 +434,7 @@
         <div class="card-meta">
           <span class="chip type-${task.type}">${task.type}</span>
           <span class="chip priority-${task.priority}">${task.priority}</span>
+          ${task.estimate ? `<span class="chip">${task.estimate}pt</span>` : ''}
           ${task.assignee ? `<span class="assignee-chip" style="background:${task.assignee.color}22;color:${task.assignee.color}">${escapeHtml(task.assignee.name)}</span>` : ''}
         </div>
         <div class="card-meta">${renderLabelChips(task.labels)}</div>
@@ -542,6 +549,8 @@
       document.getElementById('vSprint').textContent = sprint ? sprint.name : 'None';
       document.getElementById('vAssignee').innerHTML = task.assignee ? `<span class="assignee-chip" style="background:${task.assignee.color}22;color:${task.assignee.color}">${task.assignee.name}</span>` : 'Unassigned';
       document.getElementById('vLabels').innerHTML = renderLabelChips(task.labels) || 'None';
+      document.getElementById('vDueDate').textContent = task.due_date || 'None';
+      document.getElementById('vEstimate').textContent = task.estimate ? `${task.estimate} points` : 'None';
 
       // Edit form
       document.getElementById('eId').value = task.id;
@@ -555,6 +564,8 @@
       populateSelect(document.getElementById('eAssignee'), allPeople, 'id', p => p.name, 'Unassigned');
       document.getElementById('eAssignee').value = task.assignee_id || '';
       renderLabelPicker('eLabels', task.labels.map(l => l.id));
+      document.getElementById('eDueDate').value = task.due_date || '';
+      document.getElementById('eEstimate').value = task.estimate || '';
 
       document.getElementById('taskView').style.display = '';
       document.getElementById('taskEdit').style.display = 'none';
@@ -581,6 +592,8 @@
         sprint_id: document.getElementById('eSprint').value ? Number(document.getElementById('eSprint').value) : null,
         assignee_id: document.getElementById('eAssignee').value ? Number(document.getElementById('eAssignee').value) : null,
         labelIds: getSelectedLabelIds('eLabels'),
+        due_date: document.getElementById('eDueDate').value || null,
+        estimate: document.getElementById('eEstimate').value ? Number(document.getElementById('eEstimate').value) : null,
       };
       try {
         await api(`/api/tasks/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -625,6 +638,8 @@
         sprint_id: document.getElementById('nSprint').value ? Number(document.getElementById('nSprint').value) : null,
         assignee_id: document.getElementById('nAssignee').value ? Number(document.getElementById('nAssignee').value) : null,
         labelIds: getSelectedLabelIds('nLabels'),
+        due_date: document.getElementById('nDueDate').value || null,
+        estimate: document.getElementById('nEstimate').value ? Number(document.getElementById('nEstimate').value) : null,
       };
       try {
         await api('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

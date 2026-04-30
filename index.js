@@ -37,6 +37,8 @@ module.exports = async function (pi) {
     if (params.sprintId !== undefined) { normalized.sprint_id = params.sprintId; delete normalized.sprintId; }
     if (params.assigneeId !== undefined) { normalized.assignee_id = params.assigneeId; delete normalized.assigneeId; }
     if (params.labelIds !== undefined) { normalized.labelIds = params.labelIds; delete normalized.labelIds; }
+    if (params.dueDate !== undefined) { normalized.due_date = params.dueDate; delete normalized.dueDate; }
+    if (params.estimate !== undefined) { normalized.estimate = params.estimate; delete normalized.estimate; }
     return normalized;
   }
 
@@ -55,6 +57,8 @@ module.exports = async function (pi) {
       assigneeId: Type.Optional(Type.Integer({ description: "Assignee person ID" })),
       assigneeName: Type.Optional(Type.String({ description: "Create and assign a new person by name (used if assigneeId omitted)" })),
       labelIds: Type.Optional(Type.Array(Type.Integer(), { description: "Label IDs to attach" })),
+      dueDate: Type.Optional(Type.String({ description: "Due date (YYYY-MM-DD)" })),
+      estimate: Type.Optional(Type.Integer({ description: "Story points estimate" })),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const task = createTask(normalizeTaskParams(params));
@@ -81,6 +85,8 @@ module.exports = async function (pi) {
       assigneeId: Type.Optional(Type.Integer()),
       assigneeName: Type.Optional(Type.String({ description: "Create and assign a new person by name" })),
       labelIds: Type.Optional(Type.Array(Type.Integer())),
+      dueDate: Type.Optional(Type.String({ description: "Due date (YYYY-MM-DD)" })),
+      estimate: Type.Optional(Type.Integer({ description: "Story points estimate" })),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const { id, ...updates } = params;
