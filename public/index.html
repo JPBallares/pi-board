@@ -118,6 +118,8 @@
     .chip.priority-low { background: rgba(16,185,129,0.2); color: #6ee7b7; }
     .label-chip { font-size: 0.7rem; padding: 0.1rem 0.35rem; border-radius: 0.25rem; }
     .assignee-chip { font-size: 0.7rem; padding: 0.1rem 0.35rem; border-radius: 0.25rem; background: #334155; }
+    .column.collapsed { min-width: 60px; max-width: 80px; }
+    .column.collapsed .column-header { writing-mode: vertical-rl; text-orientation: mixed; padding: 0.5rem 0.25rem; justify-content: center; }
     .status-backlog .column-header { color: #94a3b8; }
     .status-in-progress .column-header { color: #38bdf8; }
     .status-code-review .column-header { color: #a78bfa; }
@@ -440,6 +442,21 @@
       return div.innerHTML;
     }
 
+    function renderMarkdown(text) {
+      if (!text) return '';
+      let html = escapeHtml(text);
+      html = html.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
+      html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+      html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+      html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+      html = html.replace(/\*\*(.*?)\*\*/gim, '<b>$1</b>');
+      html = html.replace(/\*(.*?)\*/gim, '<i>$1</i>');
+      html = html.replace(/`([^`]+)`/gim, '<code style="background:#0f172a;padding:0.1rem 0.3rem;border-radius:0.25rem;font-size:0.85em">$1</code>');
+      html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
+      html = html.replace(/\n/gim, '<br>');
+      return html;
+    }
+
     function renderLabelChips(labels) {
       if (!labels || labels.length === 0) return '';
       return labels.map(l => `<span class="label-chip" style="background:${escapeHtml(l.color)}22;color:${escapeHtml(l.color)}">${escapeHtml(l.name)}</span>`).join('');
@@ -490,16 +507,21 @@
     async function renderBoard() {
       const tasks = await fetchTasks();
       boardEl.innerHTML = '';
+      const collapsedCols = JSON.parse(localStorage.getItem('pi-board-collapsed') || '[]');
       for (const status of STATUSES) {
         const col = document.createElement('div');
-        col.className = `column status-${status}`;
+        const isCollapsed = collapsedCols.includes(status);
+        col.className = `column status-${status}` + (isCollapsed ? ' collapsed' : '');
         const statusTasks = tasks.filter(t => t.status === status);
         col.innerHTML = `
           <div class="column-header">
             <span>${status.replace(/-/g, ' ')}</span>
-            <span class="count">${statusTasks.length}</span>
+            <span style="display:flex;align-items:center;gap:0.4rem">
+              <span class="count">${statusTasks.length}</span>
+              <button class="collapse-btn" data-status="${status}" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:0.8rem;padding:0.1rem">${isCollapsed ? '▸' : '▾'}</button>
+            </span>
           </div>
-          <div class="column-body" data-status="${status}"></div>
+          <div class="column-body" data-status="${status}" style="${isCollapsed ? 'display:none' : ''}"></div>
         `;
         const body = col.querySelector('.column-body');
         statusTasks.forEach((task, idx) => {
@@ -525,6 +547,21 @@
           } catch (err) {
             showToast('Failed to move task: ' + err.message);
           }
+        });
+        col.querySelector('.collapse-btn').addEventListener('click', () => {
+          let collapsed = JSON.parse(localStorage.getItem('pi-board-collapsed') || '[]');
+          if (collapsed.includes(status)) {
+            collapsed = collapsed.filter(s => s !== status);
+            col.classList.remove('collapsed');
+            col.querySelector('.column-body').style.display = '';
+            col.querySelector('.collapse-btn').textContent = '▾';
+          } else {
+            collapsed.push(status);
+            col.classList.add('collapsed');
+            col.querySelector('.column-body').style.display = 'none';
+            col.querySelector('.collapse-btn').textContent = '▸';
+          }
+          localStorage.setItem('pi-board-collapsed', JSON.stringify(collapsed));
         });
         boardEl.appendChild(col);
       }
@@ -645,7 +682,7 @@
       const { task } = await api(`/api/tasks/${taskId}`);
       document.getElementById('taskModalTitle').textContent = `Task #${task.id}`;
       document.getElementById('vTitle').textContent = task.title;
-      document.getElementById('vDesc').textContent = task.description || '(none)';
+      document.getElementById('vDesc').innerHTML = renderMarkdown(task.description) || '<span style="opacity:0.6">(none)</span>';
       document.getElementById('vType').innerHTML = `<span class="chip type-${task.type}">${task.type}</span>`;
       document.getElementById('vStatus').textContent = task.status;
       document.getElementById('vPriority').innerHTML = `<span class="chip priority-${task.priority}">${task.priority}</span>`;
