@@ -315,6 +315,40 @@ module.exports = async function (pi) {
   });
 
   pi.registerTool({
+    name: "board_update_label",
+    label: "Update Label",
+    description: "Update a label by ID",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Label ID" }),
+      name: Type.Optional(Type.String()),
+      color: Type.Optional(Type.String({ description: "Hex color (e.g. #38bdf8)" })),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const { id, ...rest } = params;
+      const label = updateLabel(id, rest.name, rest.color);
+      return {
+        content: [{ type: "text", text: `Updated label ${label.id}: ${label.name} (${label.color})` }],
+        details: { label },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_delete_label",
+    label: "Delete Label",
+    description: "Delete a label by ID",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Label ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      deleteLabel(params.id);
+      return {
+        content: [{ type: "text", text: `Deleted label ${params.id}` }],
+      };
+    },
+  });
+
+  pi.registerTool({
     name: "board_create_person",
     label: "Create Person",
     description: "Create a new person (assignee)",
