@@ -1,9 +1,9 @@
 const { exec } = require("child_process");
 const {
   createTask, updateTask, listTasks, getTask, deleteTask,
-  createSprint, completeSprint, incompleteSprint, listSprints, updateSprint,
-  createLabel, listLabels,
-  createPerson, listPeople,
+  createSprint, completeSprint, incompleteSprint, listSprints, updateSprint, deleteSprint, getSprint,
+  createLabel, listLabels, updateLabel, deleteLabel,
+  createPerson, listPeople, updatePerson, deletePerson,
   STATUSES,
 } = require("./lib/board");
 const { start } = require("./server");
@@ -242,6 +242,41 @@ module.exports = async function (pi) {
       const sprint = updateSprint(id, updates);
       return {
         content: [{ type: "text", text: `Updated sprint ${sprint.id}: ${sprint.name} (${sprint.start_date} → ${sprint.end_date})` }],
+        details: { sprint },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_delete_sprint",
+    label: "Delete Sprint",
+    description: "Delete a sprint by ID (fails if tasks are assigned)",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Sprint ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const result = deleteSprint(params.id);
+      return {
+        content: [{ type: "text", text: `Deleted sprint ${params.id}` }],
+        details: { result },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_get_sprint",
+    label: "Get Sprint",
+    description: "Get a single sprint by ID",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Sprint ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const sprint = getSprint(params.id);
+      if (!sprint) {
+        return { content: [{ type: "text", text: `Sprint not found: ${params.id}` }] };
+      }
+      return {
+        content: [{ type: "text", text: `Sprint ${sprint.id}: ${sprint.name} (${sprint.status}) ${sprint.start_date} → ${sprint.end_date}` }],
         details: { sprint },
       };
     },
