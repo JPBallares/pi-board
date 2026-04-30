@@ -194,6 +194,9 @@
     <h1>pi-board</h1>
     <div class="controls">
       <select id="sprintFilter"><option value="">All Sprints</option></select>
+      <button id="activeSprintBtn" style="font-size:0.75rem;padding:0.35rem 0.5rem">Active Sprint</button>
+      <select id="assigneeFilter"><option value="">All Assignees</option></select>
+      <select id="labelFilter"><option value="">All Labels</option></select>
       <input type="text" id="searchInput" placeholder="Search title or description…" />
       <button id="searchBtn">Search</button>
       <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.8rem;color:#94a3b8;cursor:pointer">
@@ -394,6 +397,10 @@
     async function fetchTasks() {
       const params = new URLSearchParams();
       if (sprintFilterEl.value) params.set('sprint_id', sprintFilterEl.value);
+      const assigneeFilter = document.getElementById('assigneeFilter').value;
+      if (assigneeFilter) params.set('assignee_id', assigneeFilter);
+      const labelFilter = document.getElementById('labelFilter').value;
+      if (labelFilter) params.set('label_ids', labelFilter);
       const search = searchInputEl.value.trim();
       if (search) params.set('search', search);
       const [sortBy, sortOrder] = sortSelect.value.split('-');
@@ -519,6 +526,20 @@
         if (String(s.id) === current) opt.selected = true;
         sprintFilterEl.appendChild(opt);
       }
+    }
+
+    async function populateAssigneeFilter() {
+      await fetchPeople();
+      const current = document.getElementById('assigneeFilter').value;
+      document.getElementById('assigneeFilter').innerHTML = '<option value="">All Assignees</option>' + allPeople.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+      document.getElementById('assigneeFilter').value = current;
+    }
+
+    async function populateLabelFilter() {
+      await fetchLabels();
+      const current = document.getElementById('labelFilter').value;
+      document.getElementById('labelFilter').innerHTML = '<option value="">All Labels</option>' + allLabels.map(l => `<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('');
+      document.getElementById('labelFilter').value = current;
     }
 
     function populateSelect(selectEl, items, valueKey, textFn, emptyLabel) {
@@ -947,6 +968,18 @@
 
     // Filters
     sprintFilterEl.addEventListener('change', renderBoard);
+    document.getElementById('activeSprintBtn').addEventListener('click', async () => {
+      await fetchSprints();
+      const active = allSprints.find(s => s.status === 'active');
+      if (active) {
+        sprintFilterEl.value = active.id;
+        renderBoard();
+      } else {
+        showToast('No active sprint');
+      }
+    });
+    document.getElementById('assigneeFilter').addEventListener('change', renderBoard);
+    document.getElementById('labelFilter').addEventListener('change', renderBoard);
     searchBtn.addEventListener('click', renderBoard);
     searchInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') renderBoard(); });
     document.getElementById('archivedToggle').addEventListener('change', renderBoard);
@@ -978,6 +1011,8 @@
     // Initial load
     (async () => {
       await populateSprintFilter();
+      await populateAssigneeFilter();
+      await populateLabelFilter();
       await renderBoard();
       startAutoRefresh();
     })();
