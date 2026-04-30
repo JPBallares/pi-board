@@ -59,6 +59,7 @@ module.exports = async function (pi) {
       labelIds: Type.Optional(Type.Array(Type.Integer(), { description: "Label IDs to attach" })),
       dueDate: Type.Optional(Type.String({ description: "Due date (YYYY-MM-DD)" })),
       estimate: Type.Optional(Type.Integer({ description: "Story points estimate" })),
+      dependsOnIds: Type.Optional(Type.Array(Type.Integer(), { description: "Task IDs this task depends on" })),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const task = createTask(normalizeTaskParams(params));
@@ -87,6 +88,7 @@ module.exports = async function (pi) {
       labelIds: Type.Optional(Type.Array(Type.Integer())),
       dueDate: Type.Optional(Type.String({ description: "Due date (YYYY-MM-DD)" })),
       estimate: Type.Optional(Type.Integer({ description: "Story points estimate" })),
+      dependsOnIds: Type.Optional(Type.Array(Type.Integer(), { description: "Task IDs this task depends on" })),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const { id, ...updates } = params;
@@ -144,7 +146,7 @@ module.exports = async function (pi) {
         return { content: [{ type: "text", text: `Task not found: ${params.id}` }] };
       }
       return {
-        content: [{ type: "text", text: `Task ${task.id}:\nTitle: ${task.title}\nDescription: ${task.description || '(none)'}\nType: ${task.type}\nStatus: ${task.status}\nPriority: ${task.priority}\nSprint: ${task.sprint_id}\nAssignee: ${task.assignee ? task.assignee.name : 'unassigned'}\nLabels: ${task.labels.map(l => l.name).join(', ') || 'none'}\nCreated: ${task.created_at}\nUpdated: ${task.updated_at}` }],
+        content: [{ type: "text", text: `Task ${task.id}:\nTitle: ${task.title}\nDescription: ${task.description || '(none)'}\nType: ${task.type}\nStatus: ${task.status}\nPriority: ${task.priority}\nSprint: ${task.sprint_id}\nAssignee: ${task.assignee ? task.assignee.name : 'unassigned'}\nLabels: ${task.labels.map(l => l.name).join(', ') || 'none'}\nDue Date: ${task.due_date || 'none'}\nEstimate: ${task.estimate || 'none'}\nDepends On: ${task.depends_on.map(d => d.title).join(', ') || 'none'}\nBlocking: ${task.blocking.map(b => b.title).join(', ') || 'none'}\nCreated: ${task.created_at}\nUpdated: ${task.updated_at}` }],
         details: { task },
       };
     },

@@ -237,6 +237,8 @@
         <div class="form-group"><label>Labels</label><div id="vLabels"></div></div>
         <div class="form-group"><label>Due Date</label><div id="vDueDate"></div></div>
         <div class="form-group"><label>Estimate</label><div id="vEstimate"></div></div>
+        <div class="form-group"><label>Depends On</label><div id="vDependsOn"></div></div>
+        <div class="form-group"><label>Blocking</label><div id="vBlocking"></div></div>
         <div class="modal-actions">
           <button id="deleteTaskBtn" class="danger">Delete</button>
           <button id="editTaskBtn">Edit</button>
@@ -255,6 +257,7 @@
         <div class="form-group"><label>Labels</label><div class="label-picker" id="eLabels"></div></div>
         <div class="form-group"><label>Due Date</label><input id="eDueDate" type="date" /></div>
         <div class="form-group"><label>Estimate</label><input id="eEstimate" type="number" min="0" placeholder="Story points" /></div>
+        <div class="form-group"><label>Depends On</label><select id="eDependsOn" multiple style="min-height:60px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:0.375rem;padding:0.4rem 0.5rem;font-size:0.9rem"></select></div>
         <div class="modal-actions">
           <button id="cancelEditBtn">Cancel</button>
           <button id="saveTaskBtn" class="primary">Save</button>
@@ -277,6 +280,7 @@
       <div class="form-group"><label>Labels</label><div class="label-picker" id="nLabels"></div></div>
       <div class="form-group"><label>Due Date</label><input id="nDueDate" type="date" /></div>
       <div class="form-group"><label>Estimate</label><input id="nEstimate" type="number" min="0" placeholder="Story points" /></div>
+      <div class="form-group"><label>Depends On</label><select id="nDependsOn" multiple style="min-height:60px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:0.375rem;padding:0.4rem 0.5rem;font-size:0.9rem"></select></div>
       <div class="modal-actions">
         <button id="cancelAddBtn">Cancel</button>
         <button id="createTaskBtn" class="primary">Create</button>
@@ -425,6 +429,7 @@
     }
 
     function renderCard(task) {
+      const isBlocked = task.depends_on && task.depends_on.some(d => d.status !== 'completed');
       const div = document.createElement('div');
       div.className = 'card';
       div.draggable = true;
@@ -435,6 +440,7 @@
           <span class="chip type-${task.type}">${task.type}</span>
           <span class="chip priority-${task.priority}">${task.priority}</span>
           ${task.estimate ? `<span class="chip">${task.estimate}pt</span>` : ''}
+          ${isBlocked ? `<span class="chip" style="background:rgba(220,38,38,0.3);color:#f87171">blocked</span>` : ''}
           ${task.assignee ? `<span class="assignee-chip" style="background:${task.assignee.color}22;color:${task.assignee.color}">${escapeHtml(task.assignee.name)}</span>` : ''}
         </div>
         <div class="card-meta">${renderLabelChips(task.labels)}</div>
@@ -517,6 +523,19 @@
       selectEl.value = val;
     }
 
+    async function populateDependencySelect(selectEl, excludeId, selectedIds) {
+      const data = await api('/api/tasks');
+      const tasks = (data.tasks || []).filter(t => t.id !== excludeId);
+      selectEl.innerHTML = '';
+      for (const task of tasks) {
+        const opt = document.createElement('option');
+        opt.value = task.id;
+        opt.textContent = `#${task.id} ${task.title} [${task.status}]`;
+        if (selectedIds.includes(task.id)) opt.selected = true;
+        selectEl.appendChild(opt);
+      }
+    }
+
     function renderLabelPicker(containerId, selectedIds = []) {
       const container = document.getElementById(containerId);
       container.innerHTML = '';
@@ -551,6 +570,12 @@
       document.getElementById('vLabels').innerHTML = renderLabelChips(task.labels) || 'None';
       document.getElementById('vDueDate').textContent = task.due_date || 'None';
       document.getElementById('vEstimate').textContent = task.estimate ? `${task.estimate} points` : 'None';
+      document.getElementById('vDependsOn').innerHTML = task.depends_on && task.depends_on.length > 0
+        ? task.depends_on.map(d => `<span class="chip">#${d.id} ${escapeHtml(d.title)} (${d.status})</span>`).join(' ')
+        : 'None';
+      document.getElementById('vBlocking').innerHTML = task.blocking && task.blocking.length > 0
+        ? task.blocking.map(b => `<span class="chip">#${b.id} ${escapeHtml(b.title)} (${b.status})</span>`).join(' ')
+        : 'None';
 
       // Edit form
       document.getElementById('eId').value = task.id;
@@ -566,6 +591,7 @@
       renderLabelPicker('eLabels', task.labels.map(l => l.id));
       document.getElementById('eDueDate').value = task.due_date || '';
       document.getElementById('eEstimate').value = task.estimate || '';
+      populateDependencySelect(document.getElementById('eDependsOn'), task.id, task.depends_on.map(d => d.id));
 
       document.getElementById('taskView').style.display = '';
       document.getElementById('taskEdit').style.display = 'none';
@@ -594,6 +620,7 @@
         labelIds: getSelectedLabelIds('eLabels'),
         due_date: document.getElementById('eDueDate').value || null,
         estimate: document.getElementById('eEstimate').value ? Number(document.getElementById('eEstimate').value) : null,
+        dependsOnIds: Array.from(document.getElementById('eDependsOn').selectedOptions).map(o => Number(o.value)),
       };
       try {
         await api(`/api/tasks/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -625,6 +652,7 @@
       populateSelect(document.getElementById('nSprint'), allSprints, 'id', s => s.name, 'None');
       populateSelect(document.getElementById('nAssignee'), allPeople, 'id', p => p.name, 'Unassigned');
       renderLabelPicker('nLabels');
+      populateDependencySelect(document.getElementById('nDependsOn'), null, []);
       openModal('addModalOverlay');
     });
     document.getElementById('cancelAddBtn').addEventListener('click', () => closeModal('addModalOverlay'));
@@ -640,6 +668,7 @@
         labelIds: getSelectedLabelIds('nLabels'),
         due_date: document.getElementById('nDueDate').value || null,
         estimate: document.getElementById('nEstimate').value ? Number(document.getElementById('nEstimate').value) : null,
+        dependsOnIds: Array.from(document.getElementById('nDependsOn').selectedOptions).map(o => Number(o.value)),
       };
       try {
         await api('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
