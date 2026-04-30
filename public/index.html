@@ -14,7 +14,7 @@
     }
     header {
       background: #1e293b;
-      padding: 1rem 1.5rem;
+      padding: 0.75rem 1rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -22,79 +22,102 @@
       position: sticky;
       top: 0;
       z-index: 10;
+      gap: 0.75rem;
+      flex-wrap: wrap;
     }
-    header h1 { margin: 0; font-size: 1.25rem; color: #38bdf8; }
-    .filters { display: flex; gap: 0.75rem; align-items: center; }
-    select, button {
+    header h1 { margin: 0; font-size: 1.1rem; color: #38bdf8; white-space: nowrap; }
+    .controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    select, input, button {
       background: #334155;
       color: #e2e8f0;
       border: 1px solid #475569;
       border-radius: 0.375rem;
-      padding: 0.4rem 0.6rem;
-      font-size: 0.9rem;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.85rem;
     }
     button { cursor: pointer; }
     button:hover { background: #475569; }
+    button.primary { background: #2563eb; border-color: #2563eb; }
+    button.primary:hover { background: #1d4ed8; }
+    button.danger { background: #dc2626; border-color: #dc2626; }
+    button.danger:hover { background: #b91c1c; }
     .board {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 1rem;
-      padding: 1.5rem;
+      gap: 0.75rem;
+      padding: 1rem;
       overflow-x: auto;
+      min-height: calc(100vh - 70px);
     }
     .column {
       background: #1e293b;
       border-radius: 0.5rem;
       display: flex;
       flex-direction: column;
-      min-width: 260px;
-      max-height: calc(100vh - 120px);
+      min-width: 240px;
+      max-height: calc(100vh - 90px);
     }
     .column-header {
-      padding: 0.75rem 1rem;
+      padding: 0.6rem 0.75rem;
       font-weight: 600;
       text-transform: capitalize;
       border-bottom: 1px solid #334155;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      font-size: 0.9rem;
     }
     .column-header .count {
       background: #334155;
       border-radius: 999px;
-      padding: 0.15rem 0.5rem;
+      padding: 0.1rem 0.45rem;
       font-size: 0.75rem;
     }
     .column-body {
-      padding: 0.75rem;
+      padding: 0.5rem;
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.5rem;
       overflow-y: auto;
+      min-height: 60px;
     }
     .card {
       background: #0f172a;
       border: 1px solid #334155;
       border-radius: 0.375rem;
-      padding: 0.75rem;
+      padding: 0.6rem;
       cursor: grab;
+      transition: box-shadow 0.15s;
     }
-    .card:hover { border-color: #38bdf8; }
-    .card-title { font-weight: 500; margin-bottom: 0.35rem; }
+    .card:hover { border-color: #38bdf8; box-shadow: 0 0 0 1px #38bdf8; }
+    .card-title { font-weight: 500; font-size: 0.9rem; margin-bottom: 0.3rem; }
     .card-meta {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: #94a3b8;
       display: flex;
-      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.35rem;
       align-items: center;
-      margin-top: 0.5rem;
+      margin-top: 0.3rem;
     }
-    .badge {
-      background: #334155;
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.1rem 0.35rem;
       border-radius: 0.25rem;
-      padding: 0.15rem 0.4rem;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
+      font-weight: 500;
     }
+    .chip.type-bug { background: rgba(220,38,38,0.2); color: #f87171; }
+    .chip.type-feature { background: rgba(37,99,235,0.2); color: #60a5fa; }
+    .chip.type-chore { background: rgba(107,114,128,0.2); color: #cbd5e1; }
+    .chip.priority-urgent { background: rgba(220,38,38,0.2); color: #f87171; }
+    .chip.priority-high { background: rgba(234,179,8,0.2); color: #facc15; }
+    .chip.priority-medium { background: rgba(56,189,248,0.2); color: #7dd3fc; }
+    .chip.priority-low { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+    .label-chip { font-size: 0.7rem; padding: 0.1rem 0.35rem; border-radius: 0.25rem; }
+    .assignee-chip { font-size: 0.7rem; padding: 0.1rem 0.35rem; border-radius: 0.25rem; background: #334155; }
     .status-backlog .column-header { color: #94a3b8; }
     .status-in-progress .column-header { color: #38bdf8; }
     .status-code-review .column-header { color: #a78bfa; }
@@ -112,8 +135,51 @@
       opacity: 0;
       transition: opacity 0.3s;
       pointer-events: none;
+      z-index: 100;
     }
     .toast.show { opacity: 1; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+    .modal h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+    .form-group { margin-bottom: 0.75rem; }
+    .form-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      background: #0f172a;
+      color: #e2e8f0;
+      border: 1px solid #475569;
+      border-radius: 0.375rem;
+      padding: 0.4rem 0.5rem;
+      font-size: 0.9rem;
+    }
+    .form-group textarea { min-height: 80px; resize: vertical; }
+    .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
+    .label-picker { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.25rem; }
+    .label-option { cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 0.25rem; border: 2px solid transparent; opacity: 0.7; font-size: 0.75rem; }
+    .label-option.selected { opacity: 1; border-color: #e2e8f0; }
+    .sprint-info { font-size: 0.8rem; color: #94a3b8; }
+
     @media (max-width: 1200px) {
       .board { grid-template-columns: repeat(3, 1fr); }
     }
@@ -126,40 +192,215 @@
 <body>
   <header>
     <h1>pi-board</h1>
-    <div class="filters">
-      <label for="sprintFilter">Sprint:</label>
-      <select id="sprintFilter"><option value="">All</option></select>
-      <button id="refreshBtn">Refresh</button>
+    <div class="controls">
+      <select id="sprintFilter"><option value="">All Sprints</option></select>
+      <input type="text" id="searchInput" placeholder="Search title…" />
+      <button id="searchBtn">Search</button>
+      <select id="sortSelect">
+        <option value="order-asc">Order ↑</option>
+        <option value="order-desc">Order ↓</option>
+        <option value="priority-asc">Priority ↑</option>
+        <option value="priority-desc">Priority ↓</option>
+        <option value="created_at-desc">Newest</option>
+        <option value="created_at-asc">Oldest</option>
+      </select>
+      <button id="addTaskBtn" class="primary">+ Task</button>
+      <button id="labelsBtn">Labels</button>
+      <button id="peopleBtn">People</button>
+      <button id="sprintBtn">Sprints</button>
     </div>
   </header>
   <main class="board" id="board"></main>
   <div class="toast" id="toast"></div>
 
+  <!-- Task Modal -->
+  <div class="modal-overlay" id="taskModalOverlay">
+    <div class="modal" id="taskModal">
+      <h2 id="taskModalTitle">Task</h2>
+      <div id="taskView">
+        <div class="form-group"><label>Title</label><div id="vTitle"></div></div>
+        <div class="form-group"><label>Description</label><div id="vDesc" style="white-space:pre-wrap"></div></div>
+        <div class="form-group"><label>Type</label><div id="vType"></div></div>
+        <div class="form-group"><label>Status</label><div id="vStatus"></div></div>
+        <div class="form-group"><label>Priority</label><div id="vPriority"></div></div>
+        <div class="form-group"><label>Sprint</label><div id="vSprint"></div></div>
+        <div class="form-group"><label>Assignee</label><div id="vAssignee"></div></div>
+        <div class="form-group"><label>Labels</label><div id="vLabels"></div></div>
+        <div class="modal-actions">
+          <button id="deleteTaskBtn" class="danger">Delete</button>
+          <button id="editTaskBtn">Edit</button>
+          <button id="closeTaskBtn">Close</button>
+        </div>
+      </div>
+      <div id="taskEdit" style="display:none">
+        <input type="hidden" id="eId" />
+        <div class="form-group"><label>Title</label><input id="eTitle" /></div>
+        <div class="form-group"><label>Description</label><textarea id="eDesc"></textarea></div>
+        <div class="form-group"><label>Type</label><select id="eType"><option value="bug">Bug</option><option value="feature">Feature</option><option value="chore">Chore</option></select></div>
+        <div class="form-group"><label>Status</label><select id="eStatus"><option value="backlog">Backlog</option><option value="in-progress">In Progress</option><option value="code-review">Code Review</option><option value="uat">UAT</option><option value="completed">Completed</option></select></div>
+        <div class="form-group"><label>Priority</label><select id="ePriority"><option value="urgent">Urgent</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+        <div class="form-group"><label>Sprint</label><select id="eSprint"><option value="">None</option></select></div>
+        <div class="form-group"><label>Assignee</label><select id="eAssignee"><option value="">Unassigned</option></select></div>
+        <div class="form-group"><label>Labels</label><div class="label-picker" id="eLabels"></div></div>
+        <div class="modal-actions">
+          <button id="cancelEditBtn">Cancel</button>
+          <button id="saveTaskBtn" class="primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Task Modal -->
+  <div class="modal-overlay" id="addModalOverlay">
+    <div class="modal">
+      <h2>New Task</h2>
+      <div class="form-group"><label>Title</label><input id="nTitle" /></div>
+      <div class="form-group"><label>Description</label><textarea id="nDesc"></textarea></div>
+      <div class="form-group"><label>Type</label><select id="nType"><option value="feature">Feature</option><option value="bug">Bug</option><option value="chore">Chore</option></select></div>
+      <div class="form-group"><label>Status</label><select id="nStatus"><option value="backlog">Backlog</option><option value="in-progress">In Progress</option><option value="code-review">Code Review</option><option value="uat">UAT</option><option value="completed">Completed</option></select></div>
+      <div class="form-group"><label>Priority</label><select id="nPriority"><option value="medium">Medium</option><option value="urgent">Urgent</option><option value="high">High</option><option value="low">Low</option></select></div>
+      <div class="form-group"><label>Sprint</label><select id="nSprint"><option value="">None</option></select></div>
+      <div class="form-group"><label>Assignee</label><select id="nAssignee"><option value="">Unassigned</option></select></div>
+      <div class="form-group"><label>Labels</label><div class="label-picker" id="nLabels"></div></div>
+      <div class="modal-actions">
+        <button id="cancelAddBtn">Cancel</button>
+        <button id="createTaskBtn" class="primary">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Labels Modal -->
+  <div class="modal-overlay" id="labelsModalOverlay">
+    <div class="modal">
+      <h2>Labels</h2>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
+        <input id="lName" placeholder="Name" />
+        <input id="lColor" placeholder="#38bdf8" value="#38bdf8" style="width:100px" />
+        <button id="addLabelBtn" class="primary">Add</button>
+      </div>
+      <div id="labelsList"></div>
+      <div class="modal-actions">
+        <button id="closeLabelsBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- People Modal -->
+  <div class="modal-overlay" id="peopleModalOverlay">
+    <div class="modal">
+      <h2>People</h2>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
+        <input id="pName" placeholder="Name" />
+        <input id="pColor" placeholder="#4ade80" value="#4ade80" style="width:100px" />
+        <button id="addPersonBtn" class="primary">Add</button>
+      </div>
+      <div id="peopleList"></div>
+      <div class="modal-actions">
+        <button id="closePeopleBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sprints Modal -->
+  <div class="modal-overlay" id="sprintsModalOverlay">
+    <div class="modal">
+      <h2>Sprints</h2>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
+        <input id="sName" placeholder="Sprint name" />
+        <input id="sStart" type="date" />
+        <input id="sEnd" type="date" />
+        <button id="addSprintBtn" class="primary">Create</button>
+      </div>
+      <div id="sprintsList"></div>
+      <div class="modal-actions">
+        <button id="closeSprintsBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const STATUSES = ['backlog','in-progress','code-review','uat','completed'];
     const boardEl = document.getElementById('board');
     const sprintFilterEl = document.getElementById('sprintFilter');
-    const refreshBtn = document.getElementById('refreshBtn');
+    const searchInputEl = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const sortSelect = document.getElementById('sortSelect');
     const toastEl = document.getElementById('toast');
 
-    async function fetchTasks() {
-      const sprint = sprintFilterEl.value;
-      const url = sprint ? `/api/tasks?sprint=${encodeURIComponent(sprint)}` : '/api/tasks';
-      const res = await fetch(url);
-      const data = await res.json();
-      return data.tasks || [];
-    }
+    let allLabels = [];
+    let allPeople = [];
+    let allSprints = [];
+    let isModalOpen = false;
 
-    async function fetchAllTasks() {
-      const res = await fetch('/api/tasks');
-      const data = await res.json();
-      return data.tasks || [];
-    }
+    // Load sort preference
+    const savedSort = localStorage.getItem('pi-board-sort');
+    if (savedSort) sortSelect.value = savedSort;
 
     function showToast(msg) {
       toastEl.textContent = msg;
       toastEl.classList.add('show');
       setTimeout(() => toastEl.classList.remove('show'), 2000);
+    }
+
+    function openModal(overlayId) {
+      document.getElementById(overlayId).classList.add('open');
+      isModalOpen = true;
+    }
+    function closeModal(overlayId) {
+      document.getElementById(overlayId).classList.remove('open');
+      isModalOpen = false;
+    }
+
+    async function api(url, opts) {
+      const res = await fetch(url, opts);
+      if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
+      return res.json();
+    }
+
+    async function fetchTasks() {
+      const params = new URLSearchParams();
+      if (sprintFilterEl.value) params.set('sprint_id', sprintFilterEl.value);
+      const search = searchInputEl.value.trim();
+      if (search) params.set('search', search);
+      const [sortBy, sortOrder] = sortSelect.value.split('-');
+      if (sortBy) { params.set('sort_by', sortBy); params.set('sort_order', sortOrder); }
+      const url = '/api/tasks' + (params.toString() ? '?' + params.toString() : '');
+      const data = await api(url);
+      return data.tasks || [];
+    }
+
+    async function fetchAllTasks() {
+      const data = await api('/api/tasks');
+      return data.tasks || [];
+    }
+
+    async function fetchSprints() {
+      const data = await api('/api/sprints');
+      allSprints = data.sprints || [];
+      return data;
+    }
+
+    async function fetchLabels() {
+      const data = await api('/api/labels');
+      allLabels = data.labels || [];
+      return allLabels;
+    }
+
+    async function fetchPeople() {
+      const data = await api('/api/people');
+      allPeople = data.people || [];
+      return allPeople;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function renderLabelChips(labels) {
+      if (!labels || labels.length === 0) return '';
+      return labels.map(l => `<span class="label-chip" style="background:${escapeHtml(l.color)}22;color:${escapeHtml(l.color)}">${escapeHtml(l.name)}</span>`).join('');
     }
 
     function renderCard(task) {
@@ -170,21 +411,18 @@
       div.innerHTML = `
         <div class="card-title">${escapeHtml(task.title)}</div>
         <div class="card-meta">
-          <span class="badge">${escapeHtml(task.sprint)}</span>
-          <span>${escapeHtml(task.assignee || 'unassigned')}</span>
+          <span class="chip type-${task.type}">${task.type}</span>
+          <span class="chip priority-${task.priority}">${task.priority}</span>
+          ${task.assignee ? `<span class="assignee-chip" style="background:${task.assignee.color}22;color:${task.assignee.color}">${escapeHtml(task.assignee.name)}</span>` : ''}
         </div>
+        <div class="card-meta">${renderLabelChips(task.labels)}</div>
       `;
       div.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', task.id);
         e.dataTransfer.effectAllowed = 'move';
       });
+      div.addEventListener('click', () => openTaskModal(task.id));
       return div;
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
     }
 
     async function renderBoard() {
@@ -202,33 +440,27 @@
           <div class="column-body" data-status="${status}"></div>
         `;
         const body = col.querySelector('.column-body');
-        for (const task of statusTasks) {
+        statusTasks.forEach((task, idx) => {
           body.appendChild(renderCard(task));
-        }
-        body.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
         });
+        body.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
         body.addEventListener('drop', async (e) => {
           e.preventDefault();
-          const id = e.dataTransfer.getData('text/plain');
+          const id = Number(e.dataTransfer.getData('text/plain'));
           const newStatus = body.dataset.status;
           if (!id || !newStatus) return;
+          const children = Array.from(body.children);
+          const dropIndex = children.filter(c => {
+            const rect = c.getBoundingClientRect();
+            return e.clientY < rect.top + rect.height / 2;
+          }).length;
+          const order = dropIndex * 10;
           try {
-            const res = await fetch(`/api/tasks/${id}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ status: newStatus })
-            });
-            if (res.ok) {
-              showToast('Task moved');
-              await renderBoard();
-              await populateSprintFilter();
-            } else {
-              showToast('Failed to move task');
-            }
+            await api(`/api/tasks/${id}/move`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus, order }) });
+            showToast('Task moved');
+            await renderBoard();
           } catch (err) {
-            showToast('Error moving task');
+            showToast('Failed to move task: ' + err.message);
           }
         });
         boardEl.appendChild(col);
@@ -236,28 +468,280 @@
     }
 
     async function populateSprintFilter() {
-      const tasks = await fetchAllTasks();
-      const sprints = [...new Set(tasks.map(t => t.sprint))].sort();
+      await fetchSprints();
       const current = sprintFilterEl.value;
-      sprintFilterEl.innerHTML = '<option value="">All</option>';
-      for (const s of sprints) {
+      sprintFilterEl.innerHTML = '<option value="">All Sprints</option>';
+      for (const s of allSprints) {
         const opt = document.createElement('option');
-        opt.value = s;
-        opt.textContent = s;
-        if (s === current) opt.selected = true;
+        opt.value = s.id;
+        opt.textContent = `${s.name} (${s.status})`;
+        if (String(s.id) === current) opt.selected = true;
         sprintFilterEl.appendChild(opt);
       }
     }
 
-    sprintFilterEl.addEventListener('change', renderBoard);
-    refreshBtn.addEventListener('click', () => { renderBoard(); showToast('Refreshed'); });
+    function populateSelect(selectEl, items, valueKey, textFn, emptyLabel) {
+      const val = selectEl.value;
+      selectEl.innerHTML = emptyLabel ? `<option value="">${emptyLabel}</option>` : '';
+      for (const item of items) {
+        const opt = document.createElement('option');
+        opt.value = item[valueKey];
+        opt.textContent = textFn(item);
+        selectEl.appendChild(opt);
+      }
+      selectEl.value = val;
+    }
 
-    // Auto-refresh every 5 seconds
-    setInterval(() => { renderBoard(); populateSprintFilter(); }, 5000);
+    function renderLabelPicker(containerId, selectedIds = []) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      for (const label of allLabels) {
+        const span = document.createElement('span');
+        span.className = 'label-option' + (selectedIds.includes(label.id) ? ' selected' : '');
+        span.style.background = label.color + '33';
+        span.style.color = label.color;
+        span.textContent = label.name;
+        span.dataset.id = label.id;
+        span.addEventListener('click', () => span.classList.toggle('selected'));
+        container.appendChild(span);
+      }
+    }
+
+    function getSelectedLabelIds(containerId) {
+      return Array.from(document.querySelectorAll(`#${containerId} .label-option.selected`)).map(el => Number(el.dataset.id));
+    }
+
+    // Task detail / edit modal
+    async function openTaskModal(taskId) {
+      const { task } = await api(`/api/tasks/${taskId}`);
+      document.getElementById('taskModalTitle').textContent = `Task #${task.id}`;
+      document.getElementById('vTitle').textContent = task.title;
+      document.getElementById('vDesc').textContent = task.description || '(none)';
+      document.getElementById('vType').innerHTML = `<span class="chip type-${task.type}">${task.type}</span>`;
+      document.getElementById('vStatus').textContent = task.status;
+      document.getElementById('vPriority').innerHTML = `<span class="chip priority-${task.priority}">${task.priority}</span>`;
+      const sprint = allSprints.find(s => s.id === task.sprint_id);
+      document.getElementById('vSprint').textContent = sprint ? sprint.name : 'None';
+      document.getElementById('vAssignee').innerHTML = task.assignee ? `<span class="assignee-chip" style="background:${task.assignee.color}22;color:${task.assignee.color}">${task.assignee.name}</span>` : 'Unassigned';
+      document.getElementById('vLabels').innerHTML = renderLabelChips(task.labels) || 'None';
+
+      // Edit form
+      document.getElementById('eId').value = task.id;
+      document.getElementById('eTitle').value = task.title;
+      document.getElementById('eDesc').value = task.description || '';
+      document.getElementById('eType').value = task.type;
+      document.getElementById('eStatus').value = task.status;
+      document.getElementById('ePriority').value = task.priority;
+      populateSelect(document.getElementById('eSprint'), allSprints, 'id', s => s.name, 'None');
+      document.getElementById('eSprint').value = task.sprint_id || '';
+      populateSelect(document.getElementById('eAssignee'), allPeople, 'id', p => p.name, 'Unassigned');
+      document.getElementById('eAssignee').value = task.assignee_id || '';
+      renderLabelPicker('eLabels', task.labels.map(l => l.id));
+
+      document.getElementById('taskView').style.display = '';
+      document.getElementById('taskEdit').style.display = 'none';
+      openModal('taskModalOverlay');
+    }
+
+    document.getElementById('closeTaskBtn').addEventListener('click', () => closeModal('taskModalOverlay'));
+    document.getElementById('editTaskBtn').addEventListener('click', () => {
+      document.getElementById('taskView').style.display = 'none';
+      document.getElementById('taskEdit').style.display = '';
+    });
+    document.getElementById('cancelEditBtn').addEventListener('click', () => {
+      document.getElementById('taskView').style.display = '';
+      document.getElementById('taskEdit').style.display = 'none';
+    });
+    document.getElementById('saveTaskBtn').addEventListener('click', async () => {
+      const id = Number(document.getElementById('eId').value);
+      const body = {
+        title: document.getElementById('eTitle').value,
+        description: document.getElementById('eDesc').value,
+        type: document.getElementById('eType').value,
+        status: document.getElementById('eStatus').value,
+        priority: document.getElementById('ePriority').value,
+        sprint_id: document.getElementById('eSprint').value ? Number(document.getElementById('eSprint').value) : null,
+        assignee_id: document.getElementById('eAssignee').value ? Number(document.getElementById('eAssignee').value) : null,
+        labelIds: getSelectedLabelIds('eLabels'),
+      };
+      try {
+        await api(`/api/tasks/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        showToast('Task saved');
+        closeModal('taskModalOverlay');
+        await renderBoard();
+      } catch (err) {
+        showToast('Save failed: ' + err.message);
+      }
+    });
+    document.getElementById('deleteTaskBtn').addEventListener('click', async () => {
+      const id = Number(document.getElementById('eId').value);
+      if (!confirm('Delete this task?')) return;
+      try {
+        await api(`/api/tasks/${id}`, { method: 'DELETE' });
+        showToast('Task deleted');
+        closeModal('taskModalOverlay');
+        await renderBoard();
+      } catch (err) {
+        showToast('Delete failed: ' + err.message);
+      }
+    });
+
+    // Add task modal
+    document.getElementById('addTaskBtn').addEventListener('click', async () => {
+      await fetchSprints();
+      await fetchPeople();
+      await fetchLabels();
+      populateSelect(document.getElementById('nSprint'), allSprints, 'id', s => s.name, 'None');
+      populateSelect(document.getElementById('nAssignee'), allPeople, 'id', p => p.name, 'Unassigned');
+      renderLabelPicker('nLabels');
+      openModal('addModalOverlay');
+    });
+    document.getElementById('cancelAddBtn').addEventListener('click', () => closeModal('addModalOverlay'));
+    document.getElementById('createTaskBtn').addEventListener('click', async () => {
+      const body = {
+        title: document.getElementById('nTitle').value,
+        description: document.getElementById('nDesc').value,
+        type: document.getElementById('nType').value,
+        status: document.getElementById('nStatus').value,
+        priority: document.getElementById('nPriority').value,
+        sprint_id: document.getElementById('nSprint').value ? Number(document.getElementById('nSprint').value) : null,
+        assignee_id: document.getElementById('nAssignee').value ? Number(document.getElementById('nAssignee').value) : null,
+        labelIds: getSelectedLabelIds('nLabels'),
+      };
+      try {
+        await api('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        showToast('Task created');
+        closeModal('addModalOverlay');
+        document.getElementById('nTitle').value = '';
+        document.getElementById('nDesc').value = '';
+        await renderBoard();
+        await populateSprintFilter();
+      } catch (err) {
+        showToast('Create failed: ' + err.message);
+      }
+    });
+
+    // Labels modal
+    async function renderLabelsList() {
+      await fetchLabels();
+      const container = document.getElementById('labelsList');
+      container.innerHTML = allLabels.map(l => `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem">
+          <span class="label-chip" style="background:${escapeHtml(l.color)}22;color:${escapeHtml(l.color)}">${escapeHtml(l.name)}</span>
+          <button class="danger" style="font-size:0.75rem;padding:0.15rem 0.35rem" data-id="${l.id}">Delete</button>
+        </div>
+      `).join('');
+      container.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await api(`/api/labels/${btn.dataset.id}`, { method: 'DELETE' });
+            showToast('Label deleted');
+            await renderLabelsList();
+            await renderBoard();
+          } catch (err) { showToast(err.message); }
+        });
+      });
+    }
+    document.getElementById('labelsBtn').addEventListener('click', () => { renderLabelsList(); openModal('labelsModalOverlay'); });
+    document.getElementById('closeLabelsBtn').addEventListener('click', () => closeModal('labelsModalOverlay'));
+    document.getElementById('addLabelBtn').addEventListener('click', async () => {
+      try {
+        await api('/api/labels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('lName').value, color: document.getElementById('lColor').value }) });
+        document.getElementById('lName').value = '';
+        showToast('Label created');
+        await renderLabelsList();
+      } catch (err) { showToast(err.message); }
+    });
+
+    // People modal
+    async function renderPeopleList() {
+      await fetchPeople();
+      const container = document.getElementById('peopleList');
+      container.innerHTML = allPeople.map(p => `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem">
+          <span class="assignee-chip" style="background:${p.color}22;color:${p.color}">${escapeHtml(p.name)}</span>
+          <button class="danger" style="font-size:0.75rem;padding:0.15rem 0.35rem" data-id="${p.id}">Delete</button>
+        </div>
+      `).join('');
+      container.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await api(`/api/people/${btn.dataset.id}`, { method: 'DELETE' });
+            showToast('Person deleted');
+            await renderPeopleList();
+            await renderBoard();
+          } catch (err) { showToast(err.message); }
+        });
+      });
+    }
+    document.getElementById('peopleBtn').addEventListener('click', () => { renderPeopleList(); openModal('peopleModalOverlay'); });
+    document.getElementById('closePeopleBtn').addEventListener('click', () => closeModal('peopleModalOverlay'));
+    document.getElementById('addPersonBtn').addEventListener('click', async () => {
+      try {
+        await api('/api/people', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('pName').value, color: document.getElementById('pColor').value }) });
+        document.getElementById('pName').value = '';
+        showToast('Person created');
+        await renderPeopleList();
+      } catch (err) { showToast(err.message); }
+    });
+
+    // Sprints modal
+    async function renderSprintsList() {
+      const data = await fetchSprints();
+      const container = document.getElementById('sprintsList');
+      container.innerHTML = (data.sprints || []).map(s => `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;padding:0.5rem;background:#0f172a;border-radius:0.375rem">
+          <div>
+            <div style="font-weight:500">${escapeHtml(s.name)} <span style="font-size:0.75rem;color:#94a3b8">(${s.status})</span></div>
+            <div class="sprint-info">${s.start_date} → ${s.end_date}</div>
+          </div>
+          ${s.status === 'active' ? `<button class="primary" style="font-size:0.75rem;padding:0.25rem 0.5rem" data-id="${s.id}">Complete</button>` : ''}
+        </div>
+      `).join('');
+      container.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Complete this sprint? All tasks will be moved to Completed.')) return;
+          try {
+            await api(`/api/sprints/${btn.dataset.id}/complete`, { method: 'POST' });
+            showToast('Sprint completed');
+            await renderSprintsList();
+            await renderBoard();
+            await populateSprintFilter();
+          } catch (err) { showToast(err.message); }
+        });
+      });
+    }
+    document.getElementById('sprintBtn').addEventListener('click', () => { renderSprintsList(); openModal('sprintsModalOverlay'); });
+    document.getElementById('closeSprintsBtn').addEventListener('click', () => closeModal('sprintsModalOverlay'));
+    document.getElementById('addSprintBtn').addEventListener('click', async () => {
+      try {
+        await api('/api/sprints', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('sName').value, start_date: document.getElementById('sStart').value, end_date: document.getElementById('sEnd').value }) });
+        document.getElementById('sName').value = '';
+        document.getElementById('sStart').value = '';
+        document.getElementById('sEnd').value = '';
+        showToast('Sprint created');
+        await renderSprintsList();
+        await populateSprintFilter();
+      } catch (err) { showToast(err.message); }
+    });
+
+    // Filters
+    sprintFilterEl.addEventListener('change', renderBoard);
+    searchBtn.addEventListener('click', renderBoard);
+    searchInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') renderBoard(); });
+    sortSelect.addEventListener('change', () => {
+      localStorage.setItem('pi-board-sort', sortSelect.value);
+      renderBoard();
+    });
+
+    // Auto-refresh
+    setInterval(() => { if (!isModalOpen) { renderBoard(); populateSprintFilter(); } }, 5000);
 
     // Initial load
-    renderBoard();
-    populateSprintFilter();
+    (async () => {
+      await populateSprintFilter();
+      await renderBoard();
+    })();
   </script>
 </body>
 </html>

@@ -1,15 +1,27 @@
 const express = require('express');
 const path = require('path');
-const { createTask, updateTask, listTasks, getTask, deleteTask, STATUSES } = require('./lib/board');
+const {
+  createTask, updateTask, listTasks, getTask, deleteTask, moveTask,
+  createSprint, completeSprint, listSprints, getActiveSprint,
+  createLabel, listLabels, updateLabel, deleteLabel,
+  createPerson, listPeople, updatePerson, deletePerson,
+  STATUSES,
+} = require('./lib/board');
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// API endpoints
+// Tasks
 app.get('/api/tasks', (req, res) => {
   try {
-    const tasks = listTasks({ sprint: req.query.sprint, status: req.query.status });
+    const tasks = listTasks({
+      sprint_id: req.query.sprint_id,
+      status: req.query.status,
+      search: req.query.search,
+      sortBy: req.query.sort_by,
+      sortOrder: req.query.sort_order,
+    });
     res.json({ tasks });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -18,7 +30,7 @@ app.get('/api/tasks', (req, res) => {
 
 app.get('/api/tasks/:id', (req, res) => {
   try {
-    const task = getTask(req.params.id);
+    const task = getTask(Number(req.params.id));
     if (!task) return res.status(404).json({ error: 'Not found' });
     res.json({ task });
   } catch (e) {
@@ -37,7 +49,7 @@ app.post('/api/tasks', (req, res) => {
 
 app.patch('/api/tasks/:id', (req, res) => {
   try {
-    const task = updateTask(req.params.id, req.body);
+    const task = updateTask(Number(req.params.id), req.body);
     res.json({ task });
   } catch (e) {
     res.status(400).json({ error: e.message });
@@ -46,8 +58,116 @@ app.patch('/api/tasks/:id', (req, res) => {
 
 app.delete('/api/tasks/:id', (req, res) => {
   try {
-    const task = deleteTask(req.params.id);
+    const task = deleteTask(Number(req.params.id));
     res.json({ task });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/tasks/:id/move', (req, res) => {
+  try {
+    const task = moveTask(Number(req.params.id), req.body.status, req.body.order);
+    res.json({ task });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Sprints
+app.get('/api/sprints', (_req, res) => {
+  try {
+    res.json({ sprints: listSprints(), active: getActiveSprint() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/sprints', (req, res) => {
+  try {
+    const sprint = createSprint(req.body.name, req.body.start_date, req.body.end_date);
+    res.status(201).json({ sprint });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/sprints/:id/complete', (req, res) => {
+  try {
+    const sprint = completeSprint(Number(req.params.id));
+    res.json({ sprint });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Labels
+app.get('/api/labels', (_req, res) => {
+  try {
+    res.json({ labels: listLabels() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/labels', (req, res) => {
+  try {
+    const label = createLabel(req.body.name, req.body.color);
+    res.status(201).json({ label });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.patch('/api/labels/:id', (req, res) => {
+  try {
+    const label = updateLabel(Number(req.params.id), req.body.name, req.body.color);
+    res.json({ label });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.delete('/api/labels/:id', (req, res) => {
+  try {
+    deleteLabel(Number(req.params.id));
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// People
+app.get('/api/people', (_req, res) => {
+  try {
+    res.json({ people: listPeople() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/people', (req, res) => {
+  try {
+    const person = createPerson(req.body.name, req.body.color);
+    res.status(201).json({ person });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.patch('/api/people/:id', (req, res) => {
+  try {
+    const person = updatePerson(Number(req.params.id), req.body.name, req.body.color);
+    res.json({ person });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.delete('/api/people/:id', (req, res) => {
+  try {
+    deletePerson(Number(req.params.id));
+    res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }

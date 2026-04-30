@@ -1,5 +1,11 @@
 const { exec } = require("child_process");
-const { createTask, updateTask, listTasks, getTask, deleteTask } = require("./lib/board");
+const {
+  createTask, updateTask, listTasks, getTask, deleteTask,
+  createSprint, completeSprint, listSprints,
+  createLabel, listLabels,
+  createPerson, listPeople,
+  STATUSES,
+} = require("./lib/board");
 const { start } = require("./server");
 
 module.exports = async function (pi) {
@@ -13,6 +19,19 @@ module.exports = async function (pi) {
     Type.Literal("completed"),
   ]);
 
+  const PriorityType = Type.Union([
+    Type.Literal("urgent"),
+    Type.Literal("high"),
+    Type.Literal("medium"),
+    Type.Literal("low"),
+  ]);
+
+  const TypeType = Type.Union([
+    Type.Literal("bug"),
+    Type.Literal("feature"),
+    Type.Literal("chore"),
+  ]);
+
   pi.registerTool({
     name: "board_create_task",
     label: "Create Task",
@@ -20,9 +39,14 @@ module.exports = async function (pi) {
     parameters: Type.Object({
       title: Type.String({ description: "Task title" }),
       description: Type.Optional(Type.String({ description: "Task description" })),
-      sprint: Type.Optional(Type.String({ description: "Sprint name or number" })),
+      sprintId: Type.Optional(Type.Integer({ description: "Sprint ID" })),
       status: Type.Optional(StatusType),
-      assignee: Type.Optional(Type.String({ description: "Person assigned to the task" })),
+      type: Type.Optional(TypeType),
+      priority: Type.Optional(PriorityType),
+      order: Type.Optional(Type.Integer({ description: "Display order within column" })),
+      assigneeId: Type.Optional(Type.Integer({ description: "Assignee person ID" })),
+      assigneeName: Type.Optional(Type.String({ description: "Create and assign a new person by name (used if assigneeId omitted)" })),
+      labelIds: Type.Optional(Type.Array(Type.Integer(), { description: "Label IDs to attach" })),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const task = createTask(params);
@@ -38,12 +62,17 @@ module.exports = async function (pi) {
     label: "Update Task",
     description: "Update an existing task by ID",
     parameters: Type.Object({
-      id: Type.String({ description: "Task ID" }),
+      id: Type.Integer({ description: "Task ID" }),
       title: Type.Optional(Type.String()),
       description: Type.Optional(Type.String()),
-      sprint: Type.Optional(Type.String()),
+      sprintId: Type.Optional(Type.Integer()),
       status: Type.Optional(StatusType),
-      assignee: Type.Optional(Type.String()),
+      type: Type.Optional(TypeType),
+      priority: Type.Optional(PriorityType),
+      order: Type.Optional(Type.Integer()),
+      assigneeId: Type.Optional(Type.Integer()),
+      assigneeName: Type.Optional(Type.String({ description: "Create and assign a new person by name" })),
+      labelIds: Type.Optional(Type.Array(Type.Integer())),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const { id, ...updates } = params;
@@ -58,17 +87,27 @@ module.exports = async function (pi) {
   pi.registerTool({
     name: "board_list_tasks",
     label: "List Tasks",
-    description: "List all tasks, optionally filtered by sprint and/or status",
+    description: "List all tasks, optionally filtered by sprint, status, search, and sorted",
     parameters: Type.Object({
-      sprint: Type.Optional(Type.String({ description: "Filter by sprint name" })),
+      sprintId: Type.Optional(Type.Integer({ description: "Filter by sprint ID" })),
       status: Type.Optional(StatusType),
+      search: Type.Optional(Type.String({ description: "Search by title substring" })),
+      sortBy: Type.Optional(Type.Union([
+        Type.Literal("priority"),
+        Type.Literal("order"),
+        Type.Literal("created_at"),
+      ], { description: "Sort field" })),
+      sortOrder: Type.Optional(Type.Union([
+        Type.Literal("asc"),
+        Type.Literal("desc"),
+      ], { description: "Sort direction" })),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const tasks = listTasks(params);
       if (tasks.length === 0) {
         return { content: [{ type: "text", text: "No tasks found." }] };
       }
-      const lines = tasks.map(t => `- ${t.id}: ${t.title} [${t.status}]${t.assignee ? ' (' + t.assignee + ')' : ''} (sprint: ${t.sprint})`);
+      const lines = tasks.map(t => `- ${t.id}: ${t.title} [${t.status}]${t.assignee ? ' (' + t.assignee.name + ')' : ''} (sprint: ${t.sprint_id})`);
       return {
         content: [{ type: "text", text: `Tasks (${tasks.length}):\n${lines.join('\n')}` }],
         details: { tasks },
@@ -81,7 +120,7 @@ module.exports = async function (pi) {
     label: "Get Task",
     description: "Get a single task by ID",
     parameters: Type.Object({
-      id: Type.String({ description: "Task ID" }),
+      id: Type.Integer({ description: "Task ID" }),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const task = getTask(params.id);
@@ -89,7 +128,7 @@ module.exports = async function (pi) {
         return { content: [{ type: "text", text: `Task not found: ${params.id}` }] };
       }
       return {
-        content: [{ type: "text", text: `Task ${task.id}:\nTitle: ${task.title}\nDescription: ${task.description || '(none)'}\nStatus: ${task.status}\nSprint: ${task.sprint}\nAssignee: ${task.assignee || 'unassigned'}\nCreated: ${task.createdAt}\nUpdated: ${task.updatedAt}` }],
+        content: [{ type: "text", text: `Task ${task.id}:\nTitle: ${task.title}\nDescription: ${task.description || '(none)'}\nType: ${task.type}\nStatus: ${task.status}\nPriority: ${task.priority}\nSprint: ${task.sprint_id}\nAssignee: ${task.assignee ? task.assignee.name : 'unassigned'}\nLabels: ${task.labels.map(l => l.name).join(', ') || 'none'}\nCreated: ${task.created_at}\nUpdated: ${task.updated_at}` }],
         details: { task },
       };
     },
@@ -100,13 +139,111 @@ module.exports = async function (pi) {
     label: "Delete Task",
     description: "Delete a task by ID",
     parameters: Type.Object({
-      id: Type.String({ description: "Task ID" }),
+      id: Type.Integer({ description: "Task ID" }),
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const task = deleteTask(params.id);
       return {
         content: [{ type: "text", text: `Deleted task ${task.id}: ${task.title}` }],
         details: { task },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_create_sprint",
+    label: "Create Sprint",
+    description: "Create a new sprint (auto-activates it and completes the previous active sprint)",
+    parameters: Type.Object({
+      name: Type.String({ description: "Sprint name" }),
+      startDate: Type.String({ description: "Start date (YYYY-MM-DD)" }),
+      endDate: Type.String({ description: "End date (YYYY-MM-DD)" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const sprint = createSprint(params.name, params.startDate, params.endDate);
+      return {
+        content: [{ type: "text", text: `Created sprint ${sprint.id}: ${sprint.name} (${sprint.start_date} → ${sprint.end_date})` }],
+        details: { sprint },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_complete_sprint",
+    label: "Complete Sprint",
+    description: "Complete a sprint by ID and move all its tasks to completed",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Sprint ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const sprint = completeSprint(params.id);
+      return {
+        content: [{ type: "text", text: `Completed sprint ${sprint.id}: ${sprint.name}` }],
+        details: { sprint },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_create_label",
+    label: "Create Label",
+    description: "Create a new colored label",
+    parameters: Type.Object({
+      name: Type.String({ description: "Label name" }),
+      color: Type.Optional(Type.String({ description: "Hex color (e.g. #38bdf8)" })),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const label = createLabel(params.name, params.color);
+      return {
+        content: [{ type: "text", text: `Created label ${label.id}: ${label.name} (${label.color})` }],
+        details: { label },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_list_labels",
+    label: "List Labels",
+    description: "List all labels",
+    parameters: Type.Object({}),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const labels = listLabels();
+      if (labels.length === 0) return { content: [{ type: "text", text: "No labels found." }] };
+      return {
+        content: [{ type: "text", text: `Labels (${labels.length}):\n${labels.map(l => `- ${l.id}: ${l.name} (${l.color})`).join('\n')}` }],
+        details: { labels },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_create_person",
+    label: "Create Person",
+    description: "Create a new person (assignee)",
+    parameters: Type.Object({
+      name: Type.String({ description: "Person name" }),
+      color: Type.Optional(Type.String({ description: "Hex color (e.g. #4ade80)" })),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const person = createPerson(params.name, params.color);
+      return {
+        content: [{ type: "text", text: `Created person ${person.id}: ${person.name}` }],
+        details: { person },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_list_people",
+    label: "List People",
+    description: "List all people",
+    parameters: Type.Object({}),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const people = listPeople();
+      if (people.length === 0) return { content: [{ type: "text", text: "No people found." }] };
+      return {
+        content: [{ type: "text", text: `People (${people.length}):\n${people.map(p => `- ${p.id}: ${p.name}`).join('\n')}` }],
+        details: { people },
       };
     },
   });
