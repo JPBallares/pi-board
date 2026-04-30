@@ -411,7 +411,16 @@ function start(port = 3333) {
   return { alreadyRunning: false, port };
 }
 
-module.exports = { app, start };
+function stop() {
+  if (serverInstance) {
+    serverInstance.close();
+    serverInstance = null;
+    return { stopped: true };
+  }
+  return { stopped: false };
+}
+
+module.exports = { app, start, stop };
 
 if (require.main === module) {
   start(process.env.PI_BOARD_PORT || 3333);

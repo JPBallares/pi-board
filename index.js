@@ -11,7 +11,7 @@ const {
   createComment, listComments, deleteComment,
   STATUSES,
 } = require("./lib/board");
-const { start } = require("./server");
+const { start, stop } = require("./server");
 
 module.exports = async function (pi) {
   const { Type } = await import("typebox");
@@ -706,6 +706,28 @@ module.exports = async function (pi) {
       } else {
         ctx.ui.notify(`Started pi-board server at http://localhost:${PORT}`, "info");
       }
+      const url = `http://localhost:${PORT}`;
+      const cmd = process.platform === "darwin" ? `open ${url}` :
+                  process.platform === "win32" ? `start ${url}` :
+                  `xdg-open ${url}`;
+      exec(cmd, (error) => {
+        if (error) {
+          ctx.ui.notify(`Board is running at ${url}`, "info");
+        }
+      });
+    },
+  });
+
+  pi.registerCommand("board:restart", {
+    description: "Restart the board server (use after updating pi-board)",
+    handler: async (args, ctx) => {
+      const PORT = process.env.PI_BOARD_PORT || 3333;
+      const stopped = stop();
+      if (stopped.stopped) {
+        ctx.ui.notify(`Stopped pi-board server`, "info");
+      }
+      const result = start(PORT);
+      ctx.ui.notify(`Restarted pi-board server at http://localhost:${PORT}`, "info");
       const url = `http://localhost:${PORT}`;
       const cmd = process.platform === "darwin" ? `open ${url}` :
                   process.platform === "win32" ? `start ${url}` :
