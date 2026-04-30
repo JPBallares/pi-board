@@ -205,6 +205,15 @@
         <option value="created_at-asc">Oldest</option>
       </select>
       <button id="addTaskBtn" class="primary">+ Task</button>
+      <button id="refreshBtn" title="Refresh now">&#x21bb;</button>
+      <select id="autoRefreshSelect" title="Auto refresh">
+        <option value="0">Auto: Off</option>
+        <option value="5000">5s</option>
+        <option value="10000">10s</option>
+        <option value="30000">30s</option>
+        <option value="60000">1m</option>
+        <option value="300000">5m</option>
+      </select>
       <button id="labelsBtn">Labels</button>
       <button id="peopleBtn">People</button>
       <button id="sprintBtn">Sprints</button>
@@ -325,16 +334,22 @@
     const searchInputEl = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
     const sortSelect = document.getElementById('sortSelect');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const autoRefreshSelect = document.getElementById('autoRefreshSelect');
     const toastEl = document.getElementById('toast');
+    let autoRefreshInterval = null;
 
     let allLabels = [];
     let allPeople = [];
     let allSprints = [];
     let isModalOpen = false;
+    let isDragging = false;
 
-    // Load sort preference
+    // Load preferences
     const savedSort = localStorage.getItem('pi-board-sort');
     if (savedSort) sortSelect.value = savedSort;
+    const savedAutoRefresh = localStorage.getItem('pi-board-auto-refresh');
+    if (savedAutoRefresh !== null) autoRefreshSelect.value = savedAutoRefresh;
 
     function showToast(msg) {
       toastEl.textContent = msg;
@@ -418,9 +433,11 @@
         <div class="card-meta">${renderLabelChips(task.labels)}</div>
       `;
       div.addEventListener('dragstart', (e) => {
+        isDragging = true;
         e.dataTransfer.setData('text/plain', task.id);
         e.dataTransfer.effectAllowed = 'move';
       });
+      div.addEventListener('dragend', () => { isDragging = false; });
       div.addEventListener('click', () => openTaskModal(task.id));
       return div;
     }
@@ -446,10 +463,11 @@
         body.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
         body.addEventListener('drop', async (e) => {
           e.preventDefault();
-          const id = Number(e.dataTransfer.getData('text/plain'));
+          const draggedId = e.dataTransfer.getData('text/plain');
+          const id = Number(draggedId);
           const newStatus = body.dataset.status;
           if (!id || !newStatus) return;
-          const children = Array.from(body.children);
+          const children = Array.from(body.children).filter(c => c.dataset.id !== draggedId);
           const dropIndex = children.filter(c => {
             const rect = c.getBoundingClientRect();
             return e.clientY < rect.top + rect.height / 2;
@@ -686,19 +704,74 @@
     });
 
     // Sprints modal
+    let editingSprintId = null;
+
     async function renderSprintsList() {
       const data = await fetchSprints();
       const container = document.getElementById('sprintsList');
-      container.innerHTML = (data.sprints || []).map(s => `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;padding:0.5rem;background:#0f172a;border-radius:0.375rem">
-          <div>
-            <div style="font-weight:500">${escapeHtml(s.name)} <span style="font-size:0.75rem;color:#94a3b8">(${s.status})</span></div>
-            <div class="sprint-info">${s.start_date} → ${s.end_date}</div>
+      container.innerHTML = (data.sprints || []).map(s => {
+        const isEditing = editingSprintId === s.id;
+        if (isEditing) {
+          return `
+            <div style="margin-bottom:0.5rem;padding:0.5rem;background:#0f172a;border-radius:0.375rem">
+              <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap">
+                <input id="seName-${s.id}" value="${escapeHtml(s.name)}" style="flex:1;min-width:120px" />
+                <input id="seStart-${s.id}" type="date" value="${s.start_date}" />
+                <input id="seEnd-${s.id}" type="date" value="${s.end_date}" />
+              </div>
+              <div style="display:flex;gap:0.5rem;justify-content:flex-end">
+                <button class="cancel-edit" data-id="${s.id}" style="font-size:0.75rem;padding:0.25rem 0.5rem">Cancel</button>
+                <button class="primary save-edit" data-id="${s.id}" style="font-size:0.75rem;padding:0.25rem 0.5rem">Save</button>
+              </div>
+            </div>
+          `;
+        }
+        return `
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;padding:0.5rem;background:#0f172a;border-radius:0.375rem">
+            <div>
+              <div style="font-weight:500">${escapeHtml(s.name)} <span style="font-size:0.75rem;color:#94a3b8">(${s.status})</span></div>
+              <div class="sprint-info">${s.start_date} → ${s.end_date}</div>
+            </div>
+            <div style="display:flex;gap:0.35rem">
+              <button class="edit-sprint" style="font-size:0.75rem;padding:0.25rem 0.5rem" data-id="${s.id}">Edit</button>
+              ${s.status === 'active' ? `<button class="primary complete-sprint" style="font-size:0.75rem;padding:0.25rem 0.5rem" data-id="${s.id}">Complete</button>` : `<button class="primary incomplete-sprint" style="font-size:0.75rem;padding:0.25rem 0.5rem" data-id="${s.id}">Incomplete</button>`}
+              <button class="danger delete-sprint" style="font-size:0.75rem;padding:0.25rem 0.5rem" data-id="${s.id}">Delete</button>
+            </div>
           </div>
-          ${s.status === 'active' ? `<button class="primary" style="font-size:0.75rem;padding:0.25rem 0.5rem" data-id="${s.id}">Complete</button>` : ''}
-        </div>
-      `).join('');
-      container.querySelectorAll('button').forEach(btn => {
+        `;
+      }).join('');
+
+      container.querySelectorAll('.edit-sprint').forEach(btn => {
+        btn.addEventListener('click', () => { editingSprintId = Number(btn.dataset.id); renderSprintsList(); });
+      });
+
+      container.querySelectorAll('.cancel-edit').forEach(btn => {
+        btn.addEventListener('click', () => { editingSprintId = null; renderSprintsList(); });
+      });
+
+      container.querySelectorAll('.save-edit').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const sid = Number(btn.dataset.id);
+          try {
+            await api(`/api/sprints/${sid}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: document.getElementById(`seName-${sid}`).value,
+                start_date: document.getElementById(`seStart-${sid}`).value,
+                end_date: document.getElementById(`seEnd-${sid}`).value,
+              }),
+            });
+            showToast('Sprint updated');
+            editingSprintId = null;
+            await renderSprintsList();
+            await populateSprintFilter();
+            await renderBoard();
+          } catch (err) { showToast(err.message); }
+        });
+      });
+
+      container.querySelectorAll('.complete-sprint').forEach(btn => {
         btn.addEventListener('click', async () => {
           if (!confirm('Complete this sprint? All tasks will be moved to Completed.')) return;
           try {
@@ -707,6 +780,32 @@
             await renderSprintsList();
             await renderBoard();
             await populateSprintFilter();
+          } catch (err) { showToast(err.message); }
+        });
+      });
+
+      container.querySelectorAll('.incomplete-sprint').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Reactivate this sprint?')) return;
+          try {
+            await api(`/api/sprints/${btn.dataset.id}/incomplete`, { method: 'POST' });
+            showToast('Sprint reactivated');
+            await renderSprintsList();
+            await renderBoard();
+            await populateSprintFilter();
+          } catch (err) { showToast(err.message); }
+        });
+      });
+
+      container.querySelectorAll('.delete-sprint').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete this sprint?')) return;
+          try {
+            await api(`/api/sprints/${btn.dataset.id}`, { method: 'DELETE' });
+            showToast('Sprint deleted');
+            await renderSprintsList();
+            await populateSprintFilter();
+            await renderBoard();
           } catch (err) { showToast(err.message); }
         });
       });
@@ -734,13 +833,31 @@
       renderBoard();
     });
 
-    // Auto-refresh
-    setInterval(() => { if (!isModalOpen) { renderBoard(); populateSprintFilter(); } }, 5000);
+    function startAutoRefresh() {
+      if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+      const ms = Number(autoRefreshSelect.value);
+      if (ms > 0) {
+        autoRefreshInterval = setInterval(() => {
+          if (!isModalOpen && !isDragging) { renderBoard(); populateSprintFilter(); }
+        }, ms);
+      }
+    }
+
+    refreshBtn.addEventListener('click', async () => {
+      await renderBoard();
+      await populateSprintFilter();
+      showToast('Refreshed');
+    });
+    autoRefreshSelect.addEventListener('change', () => {
+      localStorage.setItem('pi-board-auto-refresh', autoRefreshSelect.value);
+      startAutoRefresh();
+    });
 
     // Initial load
     (async () => {
       await populateSprintFilter();
       await renderBoard();
+      startAutoRefresh();
     })();
   </script>
 </body>

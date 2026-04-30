@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const {
   createTask, updateTask, listTasks, getTask, deleteTask, moveTask,
-  createSprint, completeSprint, listSprints, getActiveSprint,
+  createSprint, completeSprint, incompleteSprint, listSprints, getActiveSprint, updateSprint, deleteSprint,
   createLabel, listLabels, updateLabel, deleteLabel,
   createPerson, listPeople, updatePerson, deletePerson,
   STATUSES,
@@ -96,6 +96,33 @@ app.post('/api/sprints/:id/complete', (req, res) => {
   try {
     const sprint = completeSprint(Number(req.params.id));
     res.json({ sprint });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/sprints/:id/incomplete', (req, res) => {
+  try {
+    const sprint = incompleteSprint(Number(req.params.id));
+    res.json({ sprint });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.patch('/api/sprints/:id', (req, res) => {
+  try {
+    const sprint = updateSprint(Number(req.params.id), req.body);
+    res.json({ sprint });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.delete('/api/sprints/:id', (req, res) => {
+  try {
+    deleteSprint(Number(req.params.id));
+    res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }

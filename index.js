@@ -1,7 +1,7 @@
 const { exec } = require("child_process");
 const {
   createTask, updateTask, listTasks, getTask, deleteTask,
-  createSprint, completeSprint, listSprints,
+  createSprint, completeSprint, incompleteSprint, listSprints, updateSprint,
   createLabel, listLabels,
   createPerson, listPeople,
   STATUSES,
@@ -176,6 +176,22 @@ module.exports = async function (pi) {
   });
 
   pi.registerTool({
+    name: "board_list_sprints",
+    label: "List Sprints",
+    description: "List all sprints",
+    parameters: Type.Object({}),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const sprints = listSprints();
+      if (sprints.length === 0) return { content: [{ type: "text", text: "No sprints found." }] };
+      const lines = sprints.map(s => `- ${s.id}: ${s.name} (${s.status}) ${s.start_date} → ${s.end_date}`);
+      return {
+        content: [{ type: "text", text: `Sprints (${sprints.length}):\n${lines.join('\n')}` }],
+        details: { sprints },
+      };
+    },
+  });
+
+  pi.registerTool({
     name: "board_complete_sprint",
     label: "Complete Sprint",
     description: "Complete a sprint by ID and move all its tasks to completed",
@@ -186,6 +202,46 @@ module.exports = async function (pi) {
       const sprint = completeSprint(params.id);
       return {
         content: [{ type: "text", text: `Completed sprint ${sprint.id}: ${sprint.name}` }],
+        details: { sprint },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_incomplete_sprint",
+    label: "Incomplete Sprint",
+    description: "Reactivate a completed sprint by ID",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Sprint ID" }),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const sprint = incompleteSprint(params.id);
+      return {
+        content: [{ type: "text", text: `Reactivated sprint ${sprint.id}: ${sprint.name}` }],
+        details: { sprint },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "board_update_sprint",
+    label: "Update Sprint",
+    description: "Update an existing sprint by ID",
+    parameters: Type.Object({
+      id: Type.Integer({ description: "Sprint ID" }),
+      name: Type.Optional(Type.String()),
+      startDate: Type.Optional(Type.String({ description: "Start date (YYYY-MM-DD)" })),
+      endDate: Type.Optional(Type.String({ description: "End date (YYYY-MM-DD)" })),
+    }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const { id, ...rest } = params;
+      const updates = {};
+      if (rest.name !== undefined) updates.name = rest.name;
+      if (rest.startDate !== undefined) updates.start_date = rest.startDate;
+      if (rest.endDate !== undefined) updates.end_date = rest.endDate;
+      const sprint = updateSprint(id, updates);
+      return {
+        content: [{ type: "text", text: `Updated sprint ${sprint.id}: ${sprint.name} (${sprint.start_date} → ${sprint.end_date})` }],
         details: { sprint },
       };
     },

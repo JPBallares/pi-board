@@ -1,6 +1,6 @@
 {
   "name": "pi-board",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AI-first local task/sprint manager",
   "main": "index.js",
   "keywords": [
