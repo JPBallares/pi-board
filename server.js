@@ -8,6 +8,7 @@ const {
   createSubtask, getSubtask, listSubtasks, toggleSubtask, updateSubtask, deleteSubtask,
   getColumnSettings, setColumnSetting,
   exportAll, importAll,
+  getTaskActivity,
   STATUSES,
 } = require('./lib/board');
 
@@ -86,6 +87,15 @@ app.post('/api/tasks/:id/duplicate', (req, res) => {
     res.status(201).json({ task });
   } catch (e) {
     res.status(400).json({ error: e.message });
+  }
+});
+
+app.get('/api/tasks/:id/activity', (req, res) => {
+  try {
+    const activity = getTaskActivity(Number(req.params.id));
+    res.json({ activity });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
